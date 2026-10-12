@@ -3,7 +3,7 @@
   "name": "Pacer",
   "version": "0.1.0",
   "description": "Read the PDF or article in this tab with a highlighter that moves at your pace.",
-  "minimum_chrome_version": "120",
+  "minimum_chrome_version": "128",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["file:///*"],
   "background": { "service_worker": "background.js", "type": "module" },

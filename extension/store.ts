@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type Settings, type SettingsStore } from '../src/lib/storage'
+import { DEFAULT_SETTINGS, type Settings, type SettingsStore } from '../src/lib/settings'
 import type { Doc } from '../src/lib/text'
 
 export interface Place {

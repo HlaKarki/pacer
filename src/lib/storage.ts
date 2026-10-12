@@ -1,40 +1,18 @@
 import { useEffect, useState } from 'react'
-import type { ChunkSize } from './text'
+import { DEFAULT_SETTINGS, type Settings } from './settings'
 
-export type Mode = 'flow' | 'focus'
-export type Theme = 'system' | 'light' | 'dark'
-export type TextSize = 's' | 'm' | 'l'
-
-export interface Settings {
-  wpm: number
-  chunk: ChunkSize
-  pauses: boolean
-  smart: boolean
-  mode: Mode
-  theme: Theme
-  size: TextSize
-}
-
-/** Settings kept outside the page, so every reader the host opens shares them. */
-export interface SettingsStore {
-  getSettings: () => Settings
-  subscribe: (listener: () => void) => () => void
-  updateSettings: (patch: Partial<Settings>) => void
-}
-
-export const DEFAULT_SETTINGS: Settings = {
-  wpm: 300,
-  chunk: 1,
-  pauses: true,
-  smart: true,
-  mode: 'flow',
-  theme: 'system',
-  size: 'm',
-}
-
-export const WPM_MIN = 100
-export const WPM_MAX = 1200
-export const WPM_STEP = 25
+// This file pulls in React, so code bundled into web pages imports these from settings.ts instead.
+export {
+  DEFAULT_SETTINGS,
+  WPM_MAX,
+  WPM_MIN,
+  WPM_STEP,
+  type Mode,
+  type Settings,
+  type SettingsStore,
+  type TextSize,
+  type Theme,
+} from './settings'
 
 function read<T>(key: string, fallback: T): T {
   try {

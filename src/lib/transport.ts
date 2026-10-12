@@ -1,6 +1,6 @@
 import { sentenceStart, type ChunkSize, type Doc } from './text'
 import { chunkMs, rampFactor } from './timing'
-import { WPM_MAX, WPM_MIN } from './storage'
+import { WPM_MAX, WPM_MIN } from './settings'
 
 export const clampWpm = (wpm: number) => Math.min(WPM_MAX, Math.max(WPM_MIN, wpm))
 

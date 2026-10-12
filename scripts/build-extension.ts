@@ -26,7 +26,7 @@ await mkdir(OUT, { recursive: true })
 
 await build({ entrypoints: ['./extension/background.ts'], format: 'esm', naming: '[name].[ext]' })
 // Injected with scripting.executeScript, which runs classic scripts only.
-await build({ entrypoints: ['./extension/extract.ts'], format: 'iife', naming: '[name].[ext]' })
+await build({ entrypoints: ['./extension/extract.ts', './extension/inpage.ts'], format: 'iife', naming: '[name].[ext]' })
 await build({
   entrypoints: ['./extension/reader.tsx', './extension/reader.css'],
   format: 'esm',
@@ -37,6 +37,7 @@ await build({
 await Promise.all([
   cp('extension/manifest.json', `${OUT}/manifest.json`),
   cp('extension/reader.html', `${OUT}/reader.html`),
+  cp('extension/inpage.css', `${OUT}/inpage.css`),
   cp('extension/icons', `${OUT}/icons`, { recursive: true }),
   cp('node_modules/pdfjs-dist/build/pdf.worker.min.mjs', `${OUT}/pdf.worker.min.mjs`),
   ...FONTS.flatMap(({ css, name }) => {
@@ -45,6 +46,6 @@ await Promise.all([
   }),
 ])
 
-for (const name of ['background.js', 'extract.js', 'reader.js', 'reader.css', 'pdf.worker.min.mjs']) {
+for (const name of ['background.js', 'extract.js', 'inpage.js', 'inpage.css', 'reader.js', 'reader.css', 'pdf.worker.min.mjs']) {
   console.log(`${OUT}/${name}  ${(Bun.file(`${OUT}/${name}`).size / 1024).toFixed(0)} kB`)
 }

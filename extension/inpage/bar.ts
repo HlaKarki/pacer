@@ -111,13 +111,13 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .wpm { display: flex; align-items: center; }
 .wpm-value { min-width: 4.6em; text-align: center; font-size: 13px; color: var(--pc-muted); font-variant-numeric: tabular-nums; }
 .wpm-value strong { color: var(--pc-ink); font-weight: 600; }
-.middle { flex: 1 1 220px; min-width: 56px; display: flex; align-items: center; gap: 10px; padding-inline: 4px; }
-.progress { position: relative; flex: 1; min-width: 40px; height: 20px; display: flex; align-items: center; cursor: pointer; touch-action: none; }
+.middle { flex: 1 1 auto; min-width: 56px; display: flex; align-items: center; gap: 10px; padding-inline: 4px; }
+.progress { position: relative; flex: 1 1 auto; width: 180px; min-width: 40px; height: 20px; display: flex; align-items: center; cursor: pointer; touch-action: none; }
 .progress::before, .fill { content: ''; position: absolute; left: 0; right: 0; height: 3px; border-radius: 3px; }
 .progress::before { background: var(--pc-rule); }
 .fill { background: var(--pc-ink-soft); transform-origin: left center; transform: scaleX(0); transition: transform 200ms linear; }
 .time { font-size: 13px; color: var(--pc-muted); font-variant-numeric: tabular-nums; }
-.notice { margin: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; color: var(--pc-ink); }
+.notice { margin: 0; flex: 1 1 auto; width: 180px; min-width: 40px; overflow: hidden; text-overflow: ellipsis; color: var(--pc-ink); }
 .text { padding: 0 12px; height: 32px; font-size: 13px; font-weight: 550; }
 .chunk { color: var(--pc-ink-soft); }
 .action { background: var(--pc-accent); color: var(--pc-accent-ink); }

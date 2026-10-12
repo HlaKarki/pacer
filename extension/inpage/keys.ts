@@ -1,4 +1,4 @@
-import { WPM_STEP } from '../../src/lib/storage'
+import { WPM_STEP } from '../../src/lib/settings'
 import type { WordMap } from './map'
 import type { StopReason } from './session'
 

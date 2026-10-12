@@ -1,6 +1,7 @@
 import { rememberSource } from './back'
 import { putDoc, type DocRecord } from './docs'
 import type { Extracted } from './extract'
+import type { InPage } from './inpage/toggle'
 
 interface Probe {
   contentType: string
@@ -15,6 +16,9 @@ class PaceError extends Error {
 const CHUNK_BYTES = 8 * 1024 * 1024
 const READER = chrome.runtime.getURL('reader.html')
 const PICKER_PAGES = /^(chrome:\/\/(newtab|new-tab-page)\/?|about:blank)$/
+const PRESS_GAP_MS = 300
+const DEFAULT_TITLE = chrome.runtime.getManifest().action?.default_title ?? 'Pace this page'
+const lastPress = new Map<number, number>()
 
 async function run<Args extends unknown[], Result>(
   tabId: number,
@@ -110,20 +114,52 @@ async function refuse(tabId: number) {
   ])
 }
 
-async function paceTab(tab: chrome.tabs.Tab) {
-  const tabId = tab.id
-  if (tabId === undefined || tab.url?.startsWith(READER)) return
-  if (PICKER_PAGES.test(tab.url ?? '')) {
-    await chrome.tabs.update(tabId, { url: READER })
-    return
-  }
+async function clearRefusal(tabId: number) {
+  await Promise.all([
+    chrome.action.setBadgeText({ tabId, text: '' }),
+    chrome.action.setTitle({ tabId, title: DEFAULT_TITLE }),
+  ]).catch(() => {})
+}
+
+/** Holding the shortcut repeats the press, so presses right after the last one are dropped. */
+function pressedRecently(tabId: number): boolean {
+  const now = Date.now()
+  const last = lastPress.get(tabId)
+  lastPress.set(tabId, now)
+  return last !== undefined && now - last < PRESS_GAP_MS
+}
+
+/** PDFs and local files Pacer may not read go to the reader tab, and every other page is read in place. */
+async function routeOf(tab: chrome.tabs.Tab, tabId: number): Promise<'tab' | 'page'> {
+  if (tab.url?.startsWith('file:') && !(await chrome.extension.isAllowedFileSchemeAccess())) return 'tab'
+  const probe = await probeTab(tabId)
+  return probe.contentType === 'application/pdf' ? 'tab' : 'page'
+}
+
+/** A new document or a reloaded extension has no copy of the page script yet, so that is when the styles go in too. */
+async function ensureInPage(tabId: number) {
+  const loaded = await run(tabId, () => typeof (globalThis as { __pacerInPage?: unknown }).__pacerInPage !== 'undefined')
+  if (loaded) return
+  await chrome.scripting.insertCSS({ target: { tabId }, files: ['inpage.css'] })
+  await chrome.scripting.executeScript({ target: { tabId }, files: ['inpage.js'] })
+}
+
+async function startInPage(tab: chrome.tabs.Tab, tabId: number) {
+  await ensureInPage(tabId)
+  const result = await run(tabId, () => (globalThis as unknown as { __pacerInPage: InPage }).__pacerInPage.toggle())
+  if (result.kind === 'started') await clearRefusal(tabId)
+  else if (result.kind === 'fallback') await openReaderTab(tab, tabId)
+  // The page has shown its own message already, so the badge only marks the button.
+  else if (result.kind === 'error') await refuse(tabId)
+}
+
+async function openReaderTab(tab: chrome.tabs.Tab, tabId: number) {
   let record: DocRecord
   try {
     record = await recordFor(tab, tabId)
     await putDoc(record)
     await rememberSource(record.id, { tabId, src: record.src })
   } catch (error) {
-    // Chrome refuses scripts on its own pages and the Web Store, so those end up here.
     console.warn('Pacer could not read the tab.', error)
     await refuse(tabId)
     return
@@ -134,6 +170,29 @@ async function paceTab(tab: chrome.tabs.Tab) {
     index: tab.index + 1,
     openerTabId: tabId,
   })
+  await clearRefusal(tabId)
+}
+
+async function paceTab(tab: chrome.tabs.Tab) {
+  const tabId = tab.id
+  if (tabId === undefined || tab.url?.startsWith(READER)) return
+  if (PICKER_PAGES.test(tab.url ?? '')) {
+    await chrome.tabs.update(tabId, { url: READER })
+    return
+  }
+  if (pressedRecently(tabId)) return
+  try {
+    if ((await routeOf(tab, tabId)) === 'page') {
+      await startInPage(tab, tabId)
+      return
+    }
+  } catch (error) {
+    // Chrome refuses scripts on its own pages and the Web Store, so those end up here.
+    console.warn('Pacer could not read the tab.', error)
+    await refuse(tabId)
+    return
+  }
+  await openReaderTab(tab, tabId)
 }
 
 chrome.action.onClicked.addListener((tab) => void paceTab(tab))

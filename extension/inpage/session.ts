@@ -1,6 +1,6 @@
 import raw from '../../src/data/frequency.txt' with { type: 'text' }
 import { parseFrequency } from '../../src/lib/frequency'
-import { WPM_STEP, type Settings } from '../../src/lib/storage'
+import { WPM_STEP, type Settings } from '../../src/lib/settings'
 import { chunkAt, parse, type ChunkSize, type Doc } from '../../src/lib/text'
 import { msPerWord, weightPrefix } from '../../src/lib/timing'
 import { chunkDelayMs, clampWpm, nextSentenceTarget, prevSentenceTarget } from '../../src/lib/transport'
