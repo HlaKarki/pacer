@@ -575,8 +575,10 @@ export class InPageSession {
     this.follow.alongLine(range)
     // The press should not move the page the reader is looking at, so scroll only to bring a start off screen into view.
     if (this.armed) {
-      if (inView(range)) this.onLine()
-      else this.follow.toLine(range, this.onLine)
+      if (inView(range)) {
+        this.follow.watch(range)
+        this.onLine()
+      } else this.follow.toLine(range, this.onLine)
     } else if (this.lineAt < 0 || !map.sameLine(this.lineAt, i)) {
       this.lineAt = i
       this.follow.toLine(range, this.onLine)

@@ -244,6 +244,28 @@ describe('InPageSession', () => {
     click.session.dispose()
   })
 
+  test('takes the paragraph in view when a contents link scrolls an armed start off screen', async () => {
+    page()
+    root.scrollTop = 1000
+    const contentsLink = () => {
+      root.scrollTop = 1600
+      document.dispatchEvent(new window.Event('scroll', { bubbles: true }) as unknown as Event)
+    }
+    const played = await begin()
+    expect(nowPara()).toBe(6)
+    contentsLink()
+    played.session.play()
+    expect([nowText(), nowPara()]).toEqual(['Paragraph', 9])
+    expect(root.scrollTop).toBeCloseTo(topOfPara(9) - HEIGHT * 0.36, 6)
+    played.session.dispose()
+
+    root.scrollTop = 1000
+    const stopped = await begin()
+    contentsLink()
+    const doc = docOf(stopped.session)
+    expect(await stopped.session.stop('esc')).toEqual({ index: doc.paragraphs[9].start, from: 9 })
+  })
+
   test('only closes the bar settings on a click on a word while armed', async () => {
     page()
     root.scrollTop = 1000

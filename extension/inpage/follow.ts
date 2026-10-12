@@ -135,6 +135,14 @@ export class Follow {
     this.frame = this.win.requestAnimationFrame(step)
   }
 
+  /** Watches the range's line without moving the page, so a scroll that takes it off screen counts as the reader's. */
+  watch(range: Range): void {
+    this.cancel()
+    this.el = viewportOf(range.startContainer).el
+    this.line = range
+    this.expected = this.el.scrollTop
+  }
+
   /** Scrolls a sideways scroll box so the chunk shows inside it, back to the start for a new line. */
   alongLine(range: Range): void {
     const el = sideScrollerOf(range.startContainer)
