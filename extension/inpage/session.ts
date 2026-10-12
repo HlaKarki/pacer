@@ -65,6 +65,8 @@ export interface SessionOptions {
   openTab?: () => void
   /** Bar "Read on" at the end of the page. */
   readOn?: () => void
+  /** The fingerprint of the Doc that Read on came from, so the same Doc again waits at its end. */
+  after?: string
   /** Runs once when the session goes, however it went, so its owner can let it go. */
   ended?: () => void
 }
@@ -75,6 +77,8 @@ const LOST: Notice = { text: 'Pacer lost its place', action: 'openTab' }
 const COVERED: Notice = { text: 'Something on the page covers the text', action: 'openTab' }
 const FAILED: Notice = { text: 'Pacer could not keep reading here', action: 'openTab' }
 const END: Notice = { text: 'End of the page', action: 'readOn' }
+const NOTHING_NEW: Notice = { text: "That's the end of this page" }
+const FINGERPRINT_WORDS = 50
 
 const NO_BAR: BarView = {
   render: () => undefined,
@@ -82,6 +86,8 @@ const NO_BAR: BarView = {
   dispose: () => undefined,
 }
 const nothing = () => undefined
+
+const fingerprintOf = (doc: Doc) => [doc.words.length, ...doc.words.slice(0, FINGERPRINT_WORDS).map((w) => w.text)].join(' ')
 
 // Frame callbacks run before the paint and hidden tabs get none, so wait for a timeout after the frame or 100 ms.
 const nextFrame = (win: Window) =>
@@ -100,7 +106,8 @@ interface Run {
 export class InPageSession {
   readonly key: string
   private readonly win: Window
-  private readonly options: Required<Omit<SessionOptions, 'win'>>
+  private readonly options: Required<Omit<SessionOptions, 'win' | 'after'>>
+  private readonly after: string | null
   private bar: BarView = NO_BAR
   private store: ExtensionStore | null = null
   private source: Article | null = null
@@ -138,6 +145,7 @@ export class InPageSession {
       readOn: options.readOn ?? nothing,
       ended: options.ended ?? nothing,
     }
+    this.after = options.after ?? null
   }
 
   get playing(): boolean {
@@ -147,6 +155,11 @@ export class InPageSession {
   /** The article as extracted at the start, for the reader tab. */
   get article(): Article | null {
     return this.source
+  }
+
+  /** Word count and opening words, enough to tell whether Read on found anything new. */
+  get fingerprint(): string | null {
+    return this.ready ? fingerprintOf(this.doc) : null
   }
 
   get wordMap(): WordMap | null {
@@ -195,7 +208,8 @@ export class InPageSession {
     this.doc = doc
     this.map = map
     this.prefix = this.pace(store.getSettings())
-    this.index = startFrom(doc, start.from, place, start.at)
+    const again = this.after === fingerprintOf(doc)
+    this.index = again ? doc.words.length - 1 : startFrom(doc, start.from, place, start.at)
     this.from = start.from
     this.resetRead(this.index)
     this.marks = Marks.mount(page)
@@ -203,7 +217,8 @@ export class InPageSession {
     this.unsubscribe = store.subscribe(this.onSettings)
     this.detachers = [attachKeys(win, this), attachClicks(page, this)]
     this.ready = true
-    this.play()
+    if (again) this.waitAtEnd()
+    else this.play()
     return { kind: 'started' }
   }
 
@@ -418,6 +433,12 @@ export class InPageSession {
   private finish() {
     this.finished = true
     this.pause(END)
+  }
+
+  private waitAtEnd() {
+    this.run(1)
+    this.finished = true
+    this.pause(NOTHING_NEW)
   }
 
   /** The first word from i in the direction of travel that the page shows, or -1 past the last one. */

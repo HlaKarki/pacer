@@ -1,7 +1,8 @@
+import type { Article } from './article'
 import { rememberSource } from './back'
 import { putDoc, type DocRecord } from './docs'
 import type { Extracted } from './extract'
-import type { InPage } from './inpage/toggle'
+import type { InPage, OpenTabMessage } from './inpage/toggle'
 
 interface Probe {
   contentType: string
@@ -82,9 +83,10 @@ async function grabArticle(tabId: number): Promise<Extracted> {
   return run(tabId, () => (globalThis as unknown as { __pacerExtract: () => Extracted }).__pacerExtract())
 }
 
-async function recordFor(tab: chrome.tabs.Tab, tabId: number): Promise<DocRecord> {
+async function recordFor(tab: chrome.tabs.Tab, tabId: number, read?: Article): Promise<DocRecord> {
   const url = tab.url ?? ''
   const base = { id: crypto.randomUUID(), src: url, title: tab.title || null, at: Date.now() }
+  if (read) return { ...base, kind: 'article', title: read.title ?? base.title, text: read.text, startParagraph: read.startParagraph }
   const isFile = url.startsWith('file:')
   if (isFile && !(await chrome.extension.isAllowedFileSchemeAccess())) {
     return { ...base, kind: /\.pdf(#|$)/i.test(url) ? 'pdf' : 'article', error: { message: '', fileAccess: true } }
@@ -148,29 +150,49 @@ async function startInPage(tab: chrome.tabs.Tab, tabId: number) {
   await ensureInPage(tabId)
   const result = await run(tabId, () => (globalThis as unknown as { __pacerInPage: InPage }).__pacerInPage.toggle())
   if (result.kind === 'started') await clearRefusal(tabId)
-  else if (result.kind === 'fallback') await openReaderTab(tab, tabId)
+  else if (result.kind === 'fallback') await openReaderTab(tab, tabId, result.article)
   // The page has shown its own message already, so the badge only marks the button.
   else if (result.kind === 'error') await refuse(tabId)
 }
 
-async function openReaderTab(tab: chrome.tabs.Tab, tabId: number) {
-  let record: DocRecord
+/** With the article the page already read, the tab skips reading the page again. */
+async function openReaderTab(tab: chrome.tabs.Tab, tabId: number, article?: Article): Promise<boolean> {
   try {
-    record = await recordFor(tab, tabId)
+    const record = await recordFor(tab, tabId, article)
     await putDoc(record)
     await rememberSource(record.id, { tabId, src: record.src })
+    await chrome.tabs.create({
+      url: `${READER}?doc=${record.id}`,
+      windowId: tab.windowId,
+      index: tab.index + 1,
+      openerTabId: tabId,
+    })
   } catch (error) {
     console.warn('Pacer could not read the tab.', error)
     await refuse(tabId)
-    return
+    return false
   }
-  await chrome.tabs.create({
-    url: `${READER}?doc=${record.id}`,
-    windowId: tab.windowId,
-    index: tab.index + 1,
-    openerTabId: tabId,
-  })
   await clearRefusal(tabId)
+  return true
+}
+
+function isOpenTab(message: unknown): message is OpenTabMessage {
+  const { type, article } = (message ?? {}) as Partial<OpenTabMessage>
+  return (
+    type === 'pacer:open-tab' &&
+    typeof article?.text === 'string' &&
+    (article.title === null || typeof article.title === 'string') &&
+    Number.isInteger(article.startParagraph)
+  )
+}
+
+function onMessage(message: unknown, sender: chrome.runtime.MessageSender, reply: (response: { ok: boolean }) => void) {
+  const tab = sender.tab
+  if (!isOpenTab(message) || tab?.id === undefined) return
+  const { title, text, startParagraph } = message.article
+  void openReaderTab({ ...tab, url: sender.url ?? tab.url }, tab.id, { title, text, startParagraph }).then((ok) => reply({ ok }))
+  // Chrome closes the reply channel when the listener returns, unless it returns true.
+  return true
 }
 
 async function paceTab(tab: chrome.tabs.Tab) {
@@ -196,6 +218,7 @@ async function paceTab(tab: chrome.tabs.Tab) {
 }
 
 chrome.action.onClicked.addListener((tab) => void paceTab(tab))
+chrome.runtime.onMessage.addListener(onMessage)
 
 // Nothing can press the toolbar button in an automated browser, so the e2e run calls this instead.
 Object.assign(globalThis, { paceTab })

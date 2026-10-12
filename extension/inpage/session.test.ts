@@ -337,6 +337,30 @@ describe('InPageSession', () => {
     session.dispose()
   })
 
+  test('Read on waits at the end when the page has nothing new, and reads from the band when it grew', async () => {
+    page()
+    const first = await begin()
+    const fingerprint = first.session.fingerprint!
+    first.session.seek(1)
+    await advance(2000)
+    await first.session.stop('close')
+    const same = await begin({ after: fingerprint })
+    expect(same.session.playing).toBe(false)
+    expect(nowText()).toBe('article.')
+    expect(lastState(same.bar).notice).toEqual({ text: "That's the end of this page" })
+    expect(lastState(same.bar).progress).toBe(1)
+    same.session.play()
+    expect(nowText()).toBe('How')
+    await same.session.stop('close')
+
+    document.querySelector('article')!.insertAdjacentHTML('beforeend', `<p data-top="${topOfPara(13)}" data-para="13">${para(13)}</p>`)
+    root.scrollTop = 1000
+    const grown = await begin({ after: fingerprint })
+    expect(grown.session.playing).toBe(true)
+    expect([nowText(), nowPara()]).toEqual(['Paragraph', 6])
+    grown.session.dispose()
+  })
+
   test('moves by word and sentence, skipping hidden words on the way back', async () => {
     page()
     document.querySelector('[data-para="1"]')!.insertAdjacentHTML('beforeend', SR_ONLY)

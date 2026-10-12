@@ -14,15 +14,21 @@ let toggleResult: ToggleResult
 let refuseScripts: boolean
 let fileAccess: boolean
 let page: { contentType: string; href: string }
+let storeFails: boolean
+let onMessage: (message: unknown, sender: chrome.runtime.MessageSender, reply: (response: unknown) => void) => unknown
 
 mock.module('./docs', () => ({
-  putDoc: async (record: DocRecord) => void records.push(record),
+  putDoc: async (record: DocRecord) => {
+    if (storeFails) throw new Error('QuotaExceededError')
+    records.push(record)
+  },
 }))
 
 const fakeChrome = {
   runtime: {
     getURL: (path: string) => `chrome-extension://pacer/${path}`,
     getManifest: () => ({ action: { default_title: 'Pace this page' } }),
+    onMessage: { addListener: (listener: typeof onMessage) => void (onMessage = listener) },
   },
   action: {
     onClicked: { addListener: () => undefined },
@@ -85,6 +91,7 @@ beforeEach(() => {
   toggleResult = { kind: 'started' }
   refuseScripts = false
   fileAccess = true
+  storeFails = false
   page = { contentType: 'text/html', href: 'https://example.com/essay' }
   Object.assign(globalThis, { document: page, location: page })
   Reflect.deleteProperty(globalThis, '__pacerInPage')
@@ -135,11 +142,12 @@ describe('paceTab', () => {
     expect(created.length).toBe(1)
   })
 
-  test('opens the reader tab when the page cannot be mapped', async () => {
-    toggleResult = { kind: 'fallback', article: { title: 'How Eyes Read', text: 'Words to read.', startParagraph: 2 }, coverage: 0.4 }
+  test('opens the reader tab with what the page read when the page cannot be mapped', async () => {
+    toggleResult = { kind: 'fallback', article: { title: null, text: 'Words the page showed.', startParagraph: 4 }, coverage: 0.4 }
     await paceTab(tabOf(5))
-    expect(created.length).toBe(1)
-    expect(records[0]).toMatchObject({ kind: 'article', title: 'How Eyes Read', text: 'Words to read.', startParagraph: 2 })
+    expect(injected).toEqual(['inpage.css', 'inpage.js'])
+    expect(created[0]).toMatchObject({ index: 4, openerTabId: 5 })
+    expect(records[0]).toMatchObject({ kind: 'article', src: 'https://example.com/essay', title: 'Essay', text: 'Words the page showed.', startParagraph: 4 })
   })
 
   test('marks the button when the page has no article', async () => {
@@ -154,6 +162,45 @@ describe('paceTab', () => {
     refuseScripts = true
     await paceTab(tabOf(7, 'https://chromewebstore.google.com/'))
     expect(badges[7]?.text).toBe('!')
+    quiet.mockRestore()
+  })
+})
+
+describe('open-tab message', () => {
+  const article = { title: 'How Eyes Read', text: 'Words to read.', startParagraph: 7 }
+  const send = async (message: unknown, sender: chrome.runtime.MessageSender) => {
+    let reply: unknown
+    const kept = onMessage(message, sender, (response) => (reply = response))
+    for (let k = 0; k < 20 && reply === undefined; k++) await Promise.resolve()
+    return { kept, reply }
+  }
+
+  test('opens the reader next to the page at the paragraph the bar stopped on', async () => {
+    const sender = { tab: tabOf(8, 'https://example.com/old'), url: 'https://example.com/essay#part-2' }
+    const { kept, reply } = await send({ type: 'pacer:open-tab', article }, sender)
+    expect(kept).toBe(true)
+    expect(reply).toEqual({ ok: true })
+    expect(injected).toEqual([])
+    expect(records[0]).toMatchObject({ kind: 'article', src: 'https://example.com/essay#part-2', ...article })
+    expect(created[0]).toMatchObject({ url: `chrome-extension://pacer/reader.html?doc=${records[0].id}`, index: 4, openerTabId: 8 })
+  })
+
+  test('ignores messages of another shape or from outside a tab', async () => {
+    for (const message of [null, 'pacer:open-tab', { type: 'pacer:open-tab' }, { type: 'other', article }, { type: 'pacer:open-tab', article: { ...article, startParagraph: '7' } }]) {
+      expect(onMessage(message, { tab: tabOf(9) }, () => undefined)).toBeUndefined()
+    }
+    expect(onMessage({ type: 'pacer:open-tab', article }, {}, () => undefined)).toBeUndefined()
+    expect(records).toEqual([])
+    expect(created).toEqual([])
+  })
+
+  test('answers not ok and marks the button when the record cannot be kept', async () => {
+    const quiet = spyOn(console, 'warn').mockImplementation(() => undefined)
+    storeFails = true
+    const { reply } = await send({ type: 'pacer:open-tab', article }, { tab: tabOf(10), url: 'https://example.com/essay' })
+    expect(reply).toEqual({ ok: false })
+    expect(created).toEqual([])
+    expect(badges[10]?.text).toBe('!')
     quiet.mockRestore()
   })
 })
