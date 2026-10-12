@@ -1,4 +1,4 @@
-import { sourcedBlocksFromHtml, type HtmlOptions, type SourcedBlock } from '../../src/lib/import/html'
+import { BLOCK_SELECTOR, sourcedBlocksFromHtml, type HtmlOptions, type SourcedBlock } from '../../src/lib/import/html'
 import type { Doc } from '../../src/lib/text'
 import { toneOf, type Tone } from './marks'
 
@@ -114,20 +114,27 @@ function hiddenOnPage(el: Element): boolean {
   return rect.width <= 2 || rect.height <= 2
 }
 
+/** A box the page lays out as a block, or a custom element wrapping blocks, which GitHub puts around its whole README. */
+function blockOnPage(el: Element): boolean {
+  if (/^(block|flex|grid|list-item|table)/.test(styleOf(el)?.display ?? '')) return true
+  return el.localName.includes('-') && el.querySelector(BLOCK_SELECTOR) !== null
+}
+
+const cached = (test: (el: Element) => boolean) => {
+  const seen = new Map<Element, boolean>()
+  return (el: Element) => {
+    let hit = seen.get(el)
+    if (hit === undefined) {
+      hit = test(el)
+      seen.set(el, hit)
+    }
+    return hit
+  }
+}
+
 /** Page words the Doc lacks cost nothing, so link lists stay in, and only text the reader cannot see is left out. */
 export function liveHtml(): HtmlOptions {
-  const hidden = new Map<Element, boolean>()
-  return {
-    skipLinkLists: false,
-    skip: (el) => {
-      let hide = hidden.get(el)
-      if (hide === undefined) {
-        hide = hiddenOnPage(el)
-        hidden.set(el, hide)
-      }
-      return hide
-    },
-  }
+  return { skipLinkLists: false, skip: cached(hiddenOnPage), block: cached(blockOnPage) }
 }
 
 export const isScroller = (el: Element) => {

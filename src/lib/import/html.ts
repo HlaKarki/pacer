@@ -5,6 +5,7 @@ const BLOCK = new Set([
   'figure', 'footer', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'li', 'main', 'ol',
   'p', 'pre', 'section', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'ul',
 ])
+export const BLOCK_SELECTOR = [...BLOCK].join(', ')
 const SKIP = new Set(['script', 'style', 'head', 'title', 'math', 'svg', 'nav', 'rt', 'rp', 'template', 'noscript'])
 const OPS_NS = 'http://www.idpf.org/2007/ops'
 

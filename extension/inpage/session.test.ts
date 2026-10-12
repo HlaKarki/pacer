@@ -260,6 +260,16 @@ describe('InPageSession', () => {
     expect(lastState(bar).notice).toEqual({ text: 'Something on the page covers the text', action: 'openTab' })
   })
 
+  test('pauses with the tab on offer instead of saying the page ended when nothing after a covered line is mapped', async () => {
+    page()
+    const { session, bar } = await begin()
+    covering = () => true
+    session.jump(docOf(session).paragraphs[12].start)
+    runFrames()
+    expect(session.playing).toBe(false)
+    expect(lastState(bar).notice).toEqual({ text: 'Something on the page covers the text', action: 'openTab' })
+  })
+
   test('reads on after one covered caption', async () => {
     page()
     root.scrollTop = 1000

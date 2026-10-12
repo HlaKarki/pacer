@@ -558,7 +558,7 @@ export class InPageSession {
         return
       }
     }
-    this.finish()
+    this.pause(COVERED)
   }
 
   private resetRead(from: number) {

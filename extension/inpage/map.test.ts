@@ -94,6 +94,19 @@ describe('WordMap', () => {
     expect(map.rangeOf(4, 5)?.startContainer.parentElement?.localName).toBe('h2')
   })
 
+  test('splits the page into blocks inside custom-element wrappers and boxes styled as blocks', () => {
+    const doc = parse(
+      'First paragraph of the readme.\n\nSecond paragraph of the readme.\n\nThird one sits in a styled span.\n\nShip it party today.',
+    )
+    const map = WordMap.build(
+      doc,
+      page(`<main><react-app><react-partial><p>First paragraph of the readme.</p><p>Second paragraph of the readme.</p></react-partial></react-app>
+        <span style="display: block">Third one sits in a styled span.</span><p>Ship it <g-emoji>party</g-emoji> today.</p></main>`),
+    )
+    expect(new Set([0, 5, 10, 17].map((i) => map.blockOf(i))).size).toBe(4)
+    expect(new Set([17, 18, 19, 20].map((i) => map.blockOf(i))).size).toBe(1)
+  })
+
   test('leaves out text the reader cannot see', () => {
     const doc = parse('Before the photo Advertisement. Continue reading after the photo the story goes on.')
     const map = WordMap.build(
