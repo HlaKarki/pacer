@@ -239,6 +239,19 @@ describe('attachKeys', () => {
     expect(pageHeard).toEqual(['keydown: ', 'keyup: '])
   })
 
+  test('keeps the keyup of the Esc that stopped Pacer from the page', () => {
+    session.playing = false
+    session.stop = (reason) => {
+      calls.push(`stop:${reason}`)
+      detach()
+    }
+    press(document.body, 'Escape')
+    press(document.body, 'Escape')
+    expect(calls).toEqual(['stop:esc'])
+    expect(pageHeard).toEqual(['keydown:Escape', 'keyup:Escape'])
+    detach = attachKeys(win, session)
+  })
+
   test('hands every key back to the page once detached', () => {
     detach()
     press(document.body, ' ')

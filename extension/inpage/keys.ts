@@ -128,6 +128,20 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
     clicked = byClick(isElement(e.target) ? e.target : null)
   }
 
+  // The Esc that stops Pacer detaches these listeners before its keyup arrives, so that keyup still needs catching.
+  const lingerUntilKeysUp = () => {
+    const onLateKeyUp = (e: KeyboardEvent) => {
+      onKeyUp(e)
+      if (!handled.size) done()
+    }
+    const done = () => {
+      win.removeEventListener('keyup', onLateKeyUp, true)
+      win.removeEventListener('blur', done)
+    }
+    win.addEventListener('keyup', onLateKeyUp, true)
+    win.addEventListener('blur', done)
+  }
+
   win.addEventListener('keydown', onKeyDown, true)
   win.addEventListener('keyup', onKeyUp, true)
   win.addEventListener('focusin', onFocus, true)
@@ -135,6 +149,7 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
     win.removeEventListener('keydown', onKeyDown, true)
     win.removeEventListener('keyup', onKeyUp, true)
     win.removeEventListener('focusin', onFocus, true)
+    if (handled.size) lingerUntilKeysUp()
   }
 }
 
