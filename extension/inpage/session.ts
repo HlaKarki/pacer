@@ -13,7 +13,7 @@ import { attachClicks, attachKeys } from './keys'
 import { extensionGone, watchNavigation, watchPage } from './lifecycle'
 import { MIN_COVERAGE, WordMap } from './map'
 import { Marks, type Tone, type ToneRun } from './marks'
-import { viewportStart } from './start'
+import { viewportStart, type ViewportStart } from './start'
 
 export type ToggleResult =
   | { kind: 'started' }
@@ -300,9 +300,8 @@ export class InPageSession {
     if (this.userScrolled) {
       this.userScrolled = false
       this.freshMap()
-      const active = this.map.rangeOf(this.chunk.start, this.chunk.end)
-      const start = active && inView(active) ? null : viewportStart(this.doc, this.map, this.win)
-      if (start && start.from !== PAST_END) {
+      const start = this.scrolledAway()
+      if (start) {
         this.index = start.at
         this.from = start.from
         this.resetRead(start.at)
@@ -383,6 +382,13 @@ export class InPageSession {
     return this.map
   }
 
+  /** Where the page is scrolled to, once the reader has scrolled the reading line off screen. */
+  private scrolledAway(): ViewportStart | null {
+    const active = this.map.rangeOf(this.chunk.start, this.chunk.end)
+    const start = active && inView(active) ? null : viewportStart(this.doc, this.map, this.win)
+    return start && start.from !== PAST_END ? start : null
+  }
+
   /** Maps the page again when it replaced the text the reading is on, since a stale map finds no paragraph in view. */
   private freshMap() {
     if (this.mapStale) this.rebuildMap()
@@ -395,8 +401,9 @@ export class InPageSession {
       return { index: this.index, from: this.from }
     }
     this.freshMap()
-    const from = viewportStart(this.doc, this.map, this.win)?.from ?? 0
-    const index = this.index
+    const away = this.userScrolled ? this.scrolledAway() : null
+    const from = away?.from ?? viewportStart(this.doc, this.map, this.win)?.from ?? 0
+    const index = away?.at ?? this.index
     this.store!.setPlace(this.key, { index, words: this.doc.words.length, from })
     const saved = this.store!.flush()
     this.dispose()

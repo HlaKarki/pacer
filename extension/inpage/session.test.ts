@@ -412,6 +412,18 @@ describe('InPageSession', () => {
     session.dispose()
   })
 
+  test('saves the paragraph in view as the place when the reader scrolled the line away and stopped', async () => {
+    page()
+    root.scrollTop = 1000
+    const first = await begin()
+    document.querySelector('[data-para="6"]')!.dispatchEvent(new window.WheelEvent('wheel', { bubbles: true, deltaY: 40 }) as unknown as Event)
+    root.scrollTop = 1600
+    expect((await first.session.stop('esc')).from).toBe(9)
+    const second = await begin()
+    expect([nowText(), nowPara()]).toEqual(['Paragraph', 9])
+    second.session.dispose()
+  })
+
   test('picks up at the paragraph in view when the page re-rendered while paused and the reader scrolled', async () => {
     page()
     root.scrollTop = 1000
