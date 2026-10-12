@@ -155,6 +155,7 @@ button:focus-visible { outline: 2px solid var(--pc-accent); outline-offset: 2px;
 button:active { transform: scale(0.94); }
 svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .icon { width: 34px; height: 34px; }
+.sliders[aria-expanded='true'] { background: color-mix(in oklab, var(--pc-ink) 7%, transparent); color: var(--pc-ink); }
 .icon.sm svg { width: 15px; height: 15px; }
 .play { width: 40px; height: 40px; background: var(--pc-accent); color: var(--pc-accent-ink); }
 .play[aria-label='Play'] svg { translate: 1px 0; }
