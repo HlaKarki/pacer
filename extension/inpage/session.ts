@@ -35,6 +35,9 @@ export interface BarState {
   playing: boolean
   wpm: number
   chunk: ChunkSize
+  smart: boolean
+  pauses: boolean
+  autoStart: boolean
   /** From 0 at the first word to 1 at the last. */
   progress: number
   /** Reading time left, in milliseconds. */
@@ -47,6 +50,7 @@ export interface BarActions {
   slower(): void
   faster(): void
   cycleChunk(): void
+  update(patch: Partial<Settings>): void
   seek(fraction: number): void
   openTab(): void
   readOn(): void
@@ -302,6 +306,7 @@ export class InPageSession {
     slower: () => this.nudgeWpm(-WPM_STEP),
     faster: () => this.nudgeWpm(WPM_STEP),
     cycleChunk: () => this.cycleChunk(),
+    update: (patch) => this.updateSettings(patch),
     seek: (fraction) => this.seek(fraction),
     openTab: () => this.options.openTab(),
     readOn: () => this.options.readOn(),
@@ -386,7 +391,11 @@ export class InPageSession {
   }
 
   setWpm(wpm: number): void {
-    this.store?.updateSettings({ wpm: clampWpm(wpm) })
+    this.updateSettings({ wpm: clampWpm(wpm) })
+  }
+
+  updateSettings(patch: Partial<Settings>): void {
+    this.store?.updateSettings(patch)
   }
 
   nudgeWpm(delta: number): void {
@@ -639,12 +648,15 @@ export class InPageSession {
 
   private render() {
     if (!this.ready) return
-    const { wpm, chunk } = this.settings()
+    const { wpm, chunk, smart, pauses, autoStart } = this.settings()
     const n = this.doc.words.length
     this.bar.render({
       playing: this.isPlaying,
       wpm,
       chunk,
+      smart,
+      pauses,
+      autoStart,
       progress: n > 1 ? this.index / (n - 1) : 0,
       left: (this.prefix[n] - this.prefix[this.index]) * msPerWord(wpm),
       notice: this.notice,

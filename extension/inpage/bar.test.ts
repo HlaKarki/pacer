@@ -16,13 +16,24 @@ const actions: BarActions = {
   slower: () => void calls.push('slower'),
   faster: () => void calls.push('faster'),
   cycleChunk: () => void calls.push('cycleChunk'),
+  update: (patch) => void calls.push(`update:${JSON.stringify(patch)}`),
   seek: (fraction) => void calls.push(`seek:${fraction}`),
   openTab: () => void calls.push('openTab'),
   readOn: () => void calls.push('readOn'),
   close: () => void calls.push('close'),
 }
 
-const STATE: BarState = { playing: true, wpm: 325, chunk: 'phrase', progress: 0.25, left: 4 * 60_000, notice: null }
+const STATE: BarState = {
+  playing: true,
+  wpm: 325,
+  chunk: 'phrase',
+  smart: true,
+  pauses: true,
+  autoStart: false,
+  progress: 0.25,
+  left: 4 * 60_000,
+  notice: null,
+}
 
 beforeEach(() => {
   roots = []
@@ -42,6 +53,10 @@ afterEach(() => {
 
 const inBar = <T extends Element = HTMLElement>(selector: string) => roots[0].querySelector<T>(selector)!
 const button = (label: string) => roots[0].querySelector<HTMLButtonElement>(`button[aria-label^="${label}"]`)!
+const radios = (group: string) => [...roots[0].querySelectorAll<HTMLButtonElement>(`[role=radiogroup][aria-label="${group}"] [role=radio]`)]
+const radio = (group: string, label: string) => radios(group).find((b) => b.textContent === label)!
+const checked = (group: string) => radios(group).find((b) => b.getAttribute('aria-checked') === 'true')?.textContent
+const hints = () => [...roots[0].querySelectorAll<HTMLElement>('.setting-hint')].filter((hint) => !hint.hidden).map((hint) => hint.textContent)
 
 describe('Bar', () => {
   test('mounts one closed host at the end of the page with its own styles', () => {
@@ -155,6 +170,93 @@ describe('Bar', () => {
     const down = new window.MouseEvent('mousedown', { bubbles: true, cancelable: true })
     button('Slower').dispatchEvent(down as unknown as Event)
     expect(down.defaultPrevented).toBe(true)
+  })
+
+  test('opens the settings panel from the sliders button and closes it on the button, a press outside the bar or when asked', () => {
+    const bar = Bar.mount(actions, document)
+    bar.render(STATE)
+    const settings = inBar('.settings')
+    const toggle = button('Reading settings')
+    const pointerDown = (target: EventTarget) =>
+      target.dispatchEvent(new window.PointerEvent('pointerdown', { bubbles: true, composed: true }) as unknown as Event)
+    expect([settings.hidden, settings.getAttribute('role'), toggle.getAttribute('aria-expanded')]).toEqual([true, 'dialog', 'false'])
+    expect(settings.parentElement).toBe(inBar('.panel'))
+    toggle.click()
+    expect([settings.hidden, toggle.getAttribute('aria-expanded')]).toEqual([false, 'true'])
+    pointerDown(radio('Smart pacing', 'Off'))
+    pointerDown(toggle)
+    expect(settings.hidden).toBe(false)
+    toggle.click()
+    expect([settings.hidden, toggle.getAttribute('aria-expanded')]).toEqual([true, 'false'])
+    toggle.click()
+    pointerDown(document.body)
+    expect(settings.hidden).toBe(true)
+    expect(bar.closeSettings()).toBe(false)
+    toggle.click()
+    expect(bar.closeSettings()).toBe(true)
+    expect(settings.hidden).toBe(true)
+    expect(calls).toEqual([])
+  })
+
+  test('shows the current settings and sends each choice as a patch, keeping focus on the page', () => {
+    const bar = Bar.mount(actions, document)
+    bar.render(STATE)
+    button('Reading settings').click()
+    const groups = [...roots[0].querySelectorAll('.settings [role=radiogroup]')].map((group) => group.getAttribute('aria-label'))
+    expect(groups).toEqual(['Words at a time', 'Smart pacing', 'Pause at punctuation', 'Start on press'])
+    expect(checked('Words at a time')).toBe('Phrase')
+    expect(checked('Smart pacing')).toBe('On')
+    expect(checked('Start on press')).toBe('Off')
+    expect(hints()).toEqual(['Small words ride with the next word', 'Rare and long words get more time'])
+    for (const [group, label] of [
+      ['Words at a time', '2'],
+      ['Words at a time', 'Sentence'],
+      ['Smart pacing', 'Off'],
+      ['Pause at punctuation', 'Off'],
+      ['Start on press', 'On'],
+    ]) {
+      radio(group, label).click()
+    }
+    expect(calls).toEqual(['update:{"chunk":2}', 'update:{"chunk":"sentence"}', 'update:{"smart":false}', 'update:{"pauses":false}', 'update:{"autoStart":true}'])
+    bar.render({ ...STATE, chunk: 2, smart: false, pauses: false, autoStart: true })
+    expect([checked('Words at a time'), checked('Smart pacing'), checked('Pause at punctuation'), checked('Start on press')]).toEqual(['2', 'Off', 'Off', 'On'])
+    expect(hints()).toEqual(['Every word gets the same time'])
+    const down = new window.MouseEvent('mousedown', { bubbles: true, cancelable: true })
+    radio('Smart pacing', 'On').dispatchEvent(down as unknown as Event)
+    expect(down.defaultPrevented).toBe(true)
+    expect(inBar('.settings').hidden).toBe(false)
+  })
+
+  test('lists the keys, with sentence steps on the plain arrows when the chunk is a sentence', () => {
+    const bar = Bar.mount(actions, document)
+    const keys = () => [...roots[0].querySelectorAll('.shortcuts > div')].map((row) => `${row.querySelector('dt')!.textContent} ${row.querySelector('dd')!.textContent}`)
+    bar.render(STATE)
+    expect(keys()).toEqual([
+      'Space Play or pause',
+      '←→ Back or forward one word',
+      '⇧←⇧→ Back or forward one sentence',
+      '↑↓ Faster or slower',
+      'Esc Pause, then stop',
+    ])
+    bar.render({ ...STATE, chunk: 'sentence' })
+    expect(keys()).toEqual(['Space Play or pause', '←→ Back or forward one sentence', '↑↓ Faster or slower', 'Esc Pause, then stop'])
+    expect(roots[0].querySelectorAll('.shortcuts kbd').length).toBe(6)
+  })
+
+  test('opens the panel below the bar when the bar sits at the top, and caps it to the room there', () => {
+    Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true })
+    document.body.innerHTML = '<p>Text</p>'
+    const box = (top: number, bottom: number) => ({ top, bottom, left: 424, right: 1016, height: bottom - top, width: 592 }) as DOMRect
+    document.elementsFromPoint = () => [document.querySelector('pacer-bar')!, document.querySelector('p')!, document.body]
+    const bar = Bar.mount(actions, document)
+    const panel = inBar('.panel')
+    panel.getBoundingClientRect = () => (panel.style.top === '16px' ? box(16, 60) : box(830, 884))
+    button('Reading settings').click()
+    expect(panel.hasAttribute('data-top')).toBe(false)
+    expect(inBar('.settings').style.maxHeight).toBe(`${830 - 8 - 16}px`)
+    bar.keepClear({ top: 840, bottom: 868 })
+    expect(panel.hasAttribute('data-top')).toBe(true)
+    expect(inBar('.settings').style.maxHeight).toBe(`${900 - 60 - 8 - 16}px`)
   })
 
   test('seeks to where the progress line is pressed', () => {

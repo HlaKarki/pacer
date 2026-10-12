@@ -778,6 +778,28 @@ describe('InPageSession', () => {
     session.dispose()
   })
 
+  test('changes pacing, chunk and Start on press from the settings panel through the shared settings', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, bar } = await begin()
+    const before = lastState(bar)
+    expect(before).toMatchObject({ smart: true, pauses: true, autoStart: false })
+    bar.actions!.update({ smart: false })
+    bar.actions!.update({ pauses: false })
+    bar.actions!.update({ autoStart: true })
+    await flush()
+    expect(data.settings).toEqual({ smart: false, pauses: false, autoStart: true })
+    expect(lastState(bar)).toMatchObject({ smart: false, pauses: false, autoStart: true, playing: false })
+    expect(lastState(bar).left).toBeLessThan(before.left)
+    bar.actions!.update({ chunk: 'sentence' })
+    expect(nowText()).toBe(para(6))
+    expect(lastState(bar)).toMatchObject({ chunk: 'sentence', notice: ARMED })
+    for (const listener of listeners) listener({ settings: { newValue: { chunk: 2, smart: true } } }, 'local')
+    expect(lastState(bar)).toMatchObject({ chunk: 2, smart: true, pauses: true, autoStart: false })
+    expect(nowText()).toBe('Paragraph 6')
+    session.dispose()
+  })
+
   test('changes speed and chunk size through the shared settings', async () => {
     page()
     const { session, bar } = await begin()

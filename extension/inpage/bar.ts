@@ -1,3 +1,4 @@
+import type { ChunkSize } from '../../src/lib/text'
 import { formatDuration } from '../../src/lib/timing'
 import type { BarActions, BarState, BarView, LineBox, NoticeAction } from './session'
 
@@ -24,18 +25,61 @@ const ICONS = {
     ['path', 'M18 6 6 18'],
     ['path', 'm6 6 12 12'],
   ],
+  settings: [
+    ['path', 'M10 5H3'],
+    ['path', 'M12 19H3'],
+    ['path', 'M14 3v4'],
+    ['path', 'M16 17v4'],
+    ['path', 'M21 12h-9'],
+    ['path', 'M21 19h-5'],
+    ['path', 'M21 5h-7'],
+    ['path', 'M8 10v4'],
+    ['path', 'M8 12H3'],
+  ],
 } satisfies Record<string, IconPart[]>
+
+type OnOff = 'on' | 'off'
+
+interface Choices<T> {
+  row: HTMLElement
+  set(value: T, hint?: string): void
+}
 
 const CHUNK_LABELS: Record<string, string> = { 1: '1 word', 2: '2 words', 3: '3 words', phrase: 'Phrase', sentence: 'Sentence' }
 const ACTION_LABELS: Record<NoticeAction, string> = { openTab: 'Open in tab', readOn: 'Read on' }
+const CHUNK_CHOICES: [ChunkSize, string][] = [
+  [1, '1'],
+  [2, '2'],
+  [3, '3'],
+  ['phrase', 'Phrase'],
+  ['sentence', 'Sentence'],
+]
+const CHUNK_HINTS: Partial<Record<ChunkSize, string>> = {
+  phrase: 'Small words ride with the next word',
+  sentence: 'The whole sentence lights up at once',
+}
+const ON_OFF: [OnOff, string][] = [
+  ['on', 'On'],
+  ['off', 'Off'],
+]
+const onOff = (on: boolean): OnOff => (on ? 'on' : 'off')
+const shortcuts = (bySentence: boolean): [string, string][] => [
+  ['Space', 'Play or pause'],
+  ['← →', bySentence ? 'Back or forward one sentence' : 'Back or forward one word'],
+  ...(bySentence ? [] : [['⇧← ⇧→', 'Back or forward one sentence'] satisfies [string, string]]),
+  ['↑ ↓', 'Faster or slower'],
+  ['Esc', 'Pause, then stop'],
+]
 const TOAST_MS = 4000
 const EDGE = 16
 const PLACE_MS = 1000
 const MAX_LIFT = 1 / 3
 const DOCK_FADE_MS = 160
+const SETTINGS_GAP = 8
 const SVG = 'http://www.w3.org/2000/svg'
 
 const TOKENS = `
+  --pc-paper: #eff1ed;
   --pc-paper-raised: #f8f9f6;
   --pc-ink: #1b2126;
   --pc-ink-soft: #485159;
@@ -47,6 +91,7 @@ const TOKENS = `
   color-scheme: light;`
 
 const DARK_TOKENS = `
+  --pc-paper: #15181b;
   --pc-paper-raised: #1c2024;
   --pc-ink: #e2e5e7;
   --pc-ink-soft: #b3b9bf;
@@ -129,6 +174,51 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .panel[data-notice] .progress, .panel[data-notice] .time { display: none; }
 .panel:not([data-notice]) .notice, .panel:not([data-action]) .action { display: none; }
 .panel[data-loading] .play, .panel[data-loading] .wpm, .panel[data-loading] .chunk { opacity: 0.4; pointer-events: none; }
+.settings {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + ${SETTINGS_GAP}px);
+  translate: -50% 0;
+  width: min(360px, calc(100vw - 32px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background: var(--pc-paper-raised);
+  border: 1px solid var(--pc-rule);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px -16px var(--pc-shadow), 0 1px 3px var(--pc-shadow);
+  font-weight: 400;
+  line-height: 1.35;
+  white-space: normal;
+  cursor: default;
+  transform-origin: bottom center;
+  animation: settings-up 180ms cubic-bezier(0.19, 1, 0.22, 1);
+}
+.settings[hidden] { display: none; }
+.panel[data-top] .settings { bottom: auto; top: calc(100% + ${SETTINGS_GAP}px); transform-origin: top center; animation-name: settings-down; }
+@keyframes settings-up {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+}
+@keyframes settings-down {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+}
+.setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.setting-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.setting-label { font-size: 14px; color: var(--pc-ink-soft); }
+.setting-hint { font-size: 12px; color: var(--pc-muted); }
+.segmented { display: inline-flex; padding: 3px; border-radius: 999px; background: color-mix(in oklab, var(--pc-ink) 6%, transparent); }
+.segmented button { padding: 5px 11px; font-size: 13px; font-weight: 550; line-height: 1.35; }
+.segmented button[aria-checked='true'] { background: var(--pc-paper-raised); color: var(--pc-ink); box-shadow: 0 0 0 1px var(--pc-rule), 0 1px 2px var(--pc-shadow); }
+.shortcuts { margin: 2px 0 0; padding-top: 14px; border-top: 1px solid var(--pc-rule); display: grid; gap: 8px; font-size: 13px; color: var(--pc-muted); }
+.shortcuts div { display: grid; grid-template-columns: 96px 1fr; align-items: center; }
+.shortcuts dt, .shortcuts dd { margin: 0; }
+kbd { margin-right: 4px; padding: 1px 6px; font: inherit; font-size: 12px; font-weight: 600; color: var(--pc-ink-soft); background: var(--pc-paper); border: 1px solid var(--pc-rule); border-bottom-width: 2px; border-radius: 5px; }
+@media (hover: none) {
+  .shortcuts { display: none; }
+}
 @media (hover: hover) and (pointer: fine) {
   button:hover { background: color-mix(in oklab, var(--pc-ink) 7%, transparent); color: var(--pc-ink); }
   .play:hover, .action:hover { background: color-mix(in oklab, var(--pc-accent) 86%, var(--pc-ink)); color: var(--pc-accent-ink); }
@@ -142,6 +232,10 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 }
 @media (prefers-reduced-motion: reduce) {
   .fill { transition: none; }
+  .settings, .panel[data-top] .settings { animation-name: settings-fade; }
+  @keyframes settings-fade {
+    from { opacity: 0; }
+  }
 }
 `
 
@@ -221,8 +315,16 @@ export class Bar implements BarView {
   private readonly chunk: HTMLButtonElement
   private readonly noticeText: HTMLElement
   private readonly action: HTMLButtonElement
+  private readonly settingsButton: HTMLButtonElement
+  private readonly settings: HTMLElement
+  private readonly chunkChoice: Choices<ChunkSize>
+  private readonly smartChoice: Choices<OnOff>
+  private readonly pausesChoice: Choices<OnOff>
+  private readonly autoStartChoice: Choices<OnOff>
+  private readonly shortcutList: HTMLElement
   private readonly doc: Document
   private readonly actions: BarActions
+  private bySentence: boolean | null = null
   private playing: boolean | null = null
   private noticeAction: NoticeAction | null = null
   private placedAt = -Infinity
@@ -267,9 +369,24 @@ export class Bar implements BarView {
     middle.append(this.progress, this.time, this.noticeText, this.action)
 
     this.chunk = this.button('text chunk', 'Words at a time', () => actions.cycleChunk())
+    this.settingsButton = this.button('icon', 'Reading settings', () => this.toggleSettings(), ICONS.settings)
+    this.settingsButton.setAttribute('aria-expanded', 'false')
     const openTab = this.button('icon open', 'Open in a Pacer tab', () => actions.openTab(), ICONS.openTab)
     const close = this.button('icon', 'Stop reading', () => actions.close(), ICONS.close)
-    panel.append(this.play, wpm, middle, this.chunk, openTab, close)
+
+    this.settings = element(doc, 'div', 'settings')
+    this.settings.setAttribute('role', 'dialog')
+    this.settings.setAttribute('aria-label', 'Reading settings')
+    this.settings.hidden = true
+    this.settings.addEventListener('mousedown', keepFocus)
+    this.chunkChoice = this.choices('Words at a time', CHUNK_CHOICES, (chunk) => actions.update({ chunk }))
+    this.smartChoice = this.choices('Smart pacing', ON_OFF, (v) => actions.update({ smart: v === 'on' }))
+    this.pausesChoice = this.choices('Pause at punctuation', ON_OFF, (v) => actions.update({ pauses: v === 'on' }))
+    this.autoStartChoice = this.choices('Start on press', ON_OFF, (v) => actions.update({ autoStart: v === 'on' }))
+    this.shortcutList = element(doc, 'dl', 'shortcuts')
+    this.settings.append(this.chunkChoice.row, this.smartChoice.row, this.pausesChoice.row, this.autoStartChoice.row, this.shortcutList)
+
+    panel.append(this.play, wpm, middle, this.chunk, this.settingsButton, openTab, close, this.settings)
     root.append(panel)
     this.setPlaying(false)
     this.place()
@@ -292,8 +409,31 @@ export class Bar implements BarView {
     this.time.textContent = `${formatDuration(state.left)} left`
     this.chunk.textContent = CHUNK_LABELS[String(state.chunk)] ?? String(state.chunk)
     this.chunk.setAttribute('aria-label', `Words at a time: ${this.chunk.textContent}`)
+    this.chunkChoice.set(state.chunk, CHUNK_HINTS[state.chunk])
+    this.smartChoice.set(onOff(state.smart), state.smart ? 'Rare and long words get more time' : 'Every word gets the same time')
+    this.pausesChoice.set(onOff(state.pauses))
+    this.autoStartChoice.set(onOff(state.autoStart))
+    this.listShortcuts(state.chunk === 'sentence')
     if (state.notice) this.notice(state.notice.text, state.notice.action)
     else this.clearNotice()
+  }
+
+  /** Opens the settings panel over the bar, or closes it when it is open. */
+  toggleSettings(): void {
+    if (this.closeSettings()) return
+    this.settings.hidden = false
+    this.settingsButton.setAttribute('aria-expanded', 'true')
+    this.doc.addEventListener('pointerdown', this.onPointerDown, true)
+    this.fitSettings()
+  }
+
+  /** False when the panel was already closed. */
+  closeSettings(): boolean {
+    if (this.settings.hidden) return false
+    this.settings.hidden = true
+    this.settingsButton.setAttribute('aria-expanded', 'false')
+    this.doc.removeEventListener('pointerdown', this.onPointerDown, true)
+    return true
   }
 
   notice(text: string, action?: NoticeAction): void {
@@ -315,6 +455,7 @@ export class Bar implements BarView {
   }
 
   dispose(): void {
+    this.closeSettings()
     this.doc.defaultView?.removeEventListener('resize', this.place)
     this.host.remove()
   }
@@ -337,10 +478,65 @@ export class Bar implements BarView {
     } else if (lift > 0) {
       style.bottom = `${lift}px`
     }
+    this.panel.toggleAttribute('data-top', top)
+    this.fitSettings()
     if (top === this.atTop) return
     this.atTop = top
     if (!win?.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       this.panel.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: DOCK_FADE_MS, easing: 'ease-out' })
+    }
+  }
+
+  // The bar can sit lifted over page furniture or docked at the top, so cap the panel to the room it has there.
+  private fitSettings() {
+    if (this.settings.hidden) return
+    const bar = this.panel.getBoundingClientRect()
+    const height = this.doc.defaultView?.innerHeight ?? 0
+    const room = (this.panel.hasAttribute('data-top') ? height - bar.bottom : bar.top) - SETTINGS_GAP - EDGE
+    this.settings.style.maxHeight = room > 0 ? `${room}px` : ''
+  }
+
+  private onPointerDown = (e: Event) => {
+    if (!e.composedPath().includes(this.host)) this.closeSettings()
+  }
+
+  private listShortcuts(bySentence: boolean) {
+    if (this.bySentence === bySentence) return
+    this.bySentence = bySentence
+    this.shortcutList.replaceChildren(
+      ...shortcuts(bySentence).map(([keys, action]) => {
+        const row = element(this.doc, 'div')
+        const dt = element(this.doc, 'dt')
+        dt.append(...keys.split(' ').map((key) => element(this.doc, 'kbd', '', key)))
+        row.append(dt, element(this.doc, 'dd', '', action))
+        return row
+      }),
+    )
+  }
+
+  private choices<T extends string | number>(label: string, options: [T, string][], pick: (value: T) => void): Choices<T> {
+    const row = element(this.doc, 'div', 'setting')
+    const text = element(this.doc, 'div', 'setting-text')
+    const hint = element(this.doc, 'span', 'setting-hint')
+    text.append(element(this.doc, 'span', 'setting-label', label), hint)
+    const group = element(this.doc, 'div', 'segmented')
+    group.setAttribute('role', 'radiogroup')
+    group.setAttribute('aria-label', label)
+    const buttons = options.map(([value, name]) => {
+      const button = this.button('', '', () => pick(value))
+      button.setAttribute('role', 'radio')
+      button.textContent = name
+      return button
+    })
+    group.append(...buttons)
+    row.append(text, group)
+    return {
+      row,
+      set: (value, note) => {
+        options.forEach(([option], k) => buttons[k].setAttribute('aria-checked', String(option === value)))
+        hint.textContent = note ?? ''
+        hint.hidden = !note
+      },
     }
   }
 
