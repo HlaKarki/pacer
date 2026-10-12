@@ -11,6 +11,7 @@ const CLICKABLE = `${CONTROLS}, ${EDITABLE}, label`
 const OVERLAY = 'dialog[open], [aria-modal="true"], :popover-open, [role=dialog], [role=alertdialog], [role=menu], [role=listbox]'
 const MODAL = 'dialog:modal, [aria-modal="true"]'
 const MENU = ':popover-open, [role=menu], [role=listbox]'
+const ACTIVATING_MS = 300
 
 export interface KeyTarget {
   readonly playing: boolean
@@ -140,13 +141,20 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
 const onWord = (map: WordMap, i: number, x: number, y: number) =>
   [...(map.rangeOf(i, i + 1)?.getClientRects() ?? [])].some((r) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom)
 
-/** A click on a word jumps there. Clicks on controls, Pacer's bar, text being selected and clicks that close a page menu are left alone. */
+/** A click on a word jumps there. Clicks on controls, Pacer's bar, text being selected, clicks that close a page menu and clicks that bring the window forward are left alone. */
 export function attachClicks(doc: Document, session: ClickTarget): () => void {
+  const win = doc.defaultView
   let closing = false
+  let focusedAt = -Infinity
+  const onWindowFocus = (e: FocusEvent) => {
+    if (e.target === win) focusedAt = performance.now()
+  }
   // The page closes its menus on the way to the click, so look at what was open as the pointer went down.
   const onPointerDown = () => {
     const focus = focusWithin(doc.activeElement)
-    closing = focus?.closest(OVERLAY) != null || inOpenControl(focus) || shown(doc, MODAL) || shown(doc, MENU)
+    // A click into a window in the background only brings it forward, so it should not move the place.
+    const activating = !doc.hasFocus() || performance.now() - focusedAt < ACTIVATING_MS
+    closing = activating || focus?.closest(OVERLAY) != null || inOpenControl(focus) || shown(doc, MODAL) || shown(doc, MENU)
   }
   const onClick = (e: MouseEvent) => {
     const closed = closing
@@ -166,9 +174,11 @@ export function attachClicks(doc: Document, session: ClickTarget): () => void {
     }
     if (map && i >= 0 && onWord(map, i, e.clientX, e.clientY)) session.jump(i)
   }
+  win?.addEventListener('focus', onWindowFocus)
   doc.addEventListener('pointerdown', onPointerDown, true)
   doc.addEventListener('click', onClick)
   return () => {
+    win?.removeEventListener('focus', onWindowFocus)
     doc.removeEventListener('pointerdown', onPointerDown, true)
     doc.removeEventListener('click', onClick)
   }

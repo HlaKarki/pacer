@@ -379,6 +379,23 @@ describe('attachClicks', () => {
     expect(jumps).toEqual([3])
   })
 
+  test('leaves the place alone on the click that brings the window forward', async () => {
+    const pointerDown = () => $('#text').dispatchEvent(new window.Event('pointerdown', { bubbles: true, composed: true }) as unknown as Event)
+    document.hasFocus = () => false
+    pointerDown()
+    click($('#text'))
+    document.hasFocus = () => true
+    win.dispatchEvent(new window.FocusEvent('focus') as unknown as Event)
+    pointerDown()
+    click($('#text'))
+    expect(jumps).toEqual([])
+    await Bun.sleep(320)
+    pointerDown()
+    click($('#text'))
+    expect(jumps).toEqual([3])
+    Reflect.deleteProperty(document, 'hasFocus')
+  })
+
   test('maps the page again when the page replaced the text the reading is on', () => {
     owns = false
     stale = true
