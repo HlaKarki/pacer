@@ -10,11 +10,13 @@
     "preview": "vite preview",
     "test": "bun test",
     "build:obsidian": "bun scripts/build-obsidian.ts",
-    "install:obsidian": "bun scripts/install-obsidian.ts"
+    "install:obsidian": "bun scripts/install-obsidian.ts",
+    "build:extension": "bun scripts/build-extension.ts"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fontsource-variable/literata": "^5.3.0",
+    "@mozilla/readability": "^0.6.0",
     "fflate": "^0.8.3",
     "lucide-react": "^1.55.0",
     "pdfjs-dist": "^6.4.299",
@@ -22,6 +24,7 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@types/chrome": "^0.3.5",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
