@@ -151,6 +151,13 @@ describe('paragraph lines', () => {
     expect(paragraphAtLine(lines, 40)).toBe(4)
   })
 
+  test('starts at the first paragraph of a section that shares one line', () => {
+    const table = [0, 2, 2, 2, 7]
+    expect(paragraphAtLine(table, 2)).toBe(1)
+    expect(paragraphAtLine(table, 5)).toBe(1)
+    expect(paragraphAtLine(table, 7)).toBe(4)
+  })
+
   test('maps a word back to its source line', () => {
     expect(lineAtWord(doc, lines, doc.paragraphs[3].start + 1)).toBe(5)
   })

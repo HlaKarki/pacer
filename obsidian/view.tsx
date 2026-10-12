@@ -1,4 +1,4 @@
-import { FileView, MarkdownView, type TFile, type ViewStateResult, type WorkspaceLeaf } from 'obsidian'
+import { FileView, type TFile, type ViewStateResult, type WorkspaceLeaf } from 'obsidian'
 import { createRoot, type Root } from 'react-dom/client'
 import { ImportError } from '../src/lib/import/errors'
 import { parse, type Doc } from '../src/lib/text'
@@ -139,11 +139,13 @@ export class PacerView extends FileView {
     const state: Record<string, unknown> = { file: file.path }
     if (this.back.mode !== undefined) state.mode = this.back.mode
     if (this.back.source !== undefined) state.source = this.back.source
-    await this.leaf.setViewState({ type: 'markdown', state, active: true })
-    const view = this.leaf.view
-    if (loaded?.paragraphLines && view instanceof MarkdownView) {
-      scrollToLine(view, lineAtWord(loaded.doc, loaded.paragraphLines, loaded.index))
+    // Reading view renders after setViewState resolves and drops a scroll set then, so hand it over as ephemeral state.
+    let eState: Record<string, unknown> | undefined
+    if (loaded?.paragraphLines) {
+      const at = { line: lineAtWord(loaded.doc, loaded.paragraphLines, loaded.index), ch: 0 }
+      eState = { scroll: at.line, cursor: { from: at, to: at } }
     }
+    await this.leaf.setViewState({ type: 'markdown', state, active: true }, eState)
   }
 
   private show(screen: Screen) {
@@ -167,15 +169,5 @@ export class PacerView extends FileView {
         />
       ),
     )
-  }
-}
-
-function scrollToLine(view: MarkdownView, line: number) {
-  if (view.getMode() === 'source') {
-    const at = { line, ch: 0 }
-    view.editor.setCursor(at)
-    view.editor.scrollIntoView({ from: at, to: at }, true)
-  } else {
-    view.previewMode.applyScroll(line)
   }
 }

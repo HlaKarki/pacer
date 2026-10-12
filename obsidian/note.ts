@@ -51,10 +51,12 @@ export function blocksFromSections(sections: RenderedSection[]): { blocks: Block
   return { blocks, lines }
 }
 
-/** The last paragraph that starts on or before the line. */
+/** A table or callout gives several paragraphs one source line, so start at the first of them. */
 export function paragraphAtLine(paragraphLines: number[], line: number): number {
   let found = 0
-  for (let k = 0; k < paragraphLines.length && paragraphLines[k] <= line; k++) found = k
+  for (let k = 0; k < paragraphLines.length && paragraphLines[k] <= line; k++) {
+    if (paragraphLines[k] !== paragraphLines[found]) found = k
+  }
   return found
 }
 

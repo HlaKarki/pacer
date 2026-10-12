@@ -15,7 +15,8 @@ const backOf = (view: FileView): BackState => {
 
 function cursorLine(view: MarkdownView): number {
   if (view.getMode() === 'source') return view.editor.getCursor('head').line
-  return Math.floor(view.previewMode.getScroll())
+  // getScroll can land a hair under the line it was scrolled to, so round near-misses up.
+  return Math.floor(view.previewMode.getScroll() + 0.05)
 }
 
 export default class PacerPlugin extends Plugin {
