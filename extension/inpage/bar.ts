@@ -173,7 +173,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .action { background: var(--pc-accent); color: var(--pc-accent-ink); }
 .panel[data-notice] .progress, .panel[data-notice] .time { display: none; }
 .panel:not([data-notice]) .notice, .panel:not([data-action]) .action { display: none; }
-.panel[data-loading] .play, .panel[data-loading] .wpm, .panel[data-loading] .chunk { opacity: 0.4; pointer-events: none; }
+.panel[data-loading] .play, .panel[data-loading] .wpm, .panel[data-loading] .chunk, .panel[data-loading] .sliders { opacity: 0.4; pointer-events: none; }
 .settings {
   position: absolute;
   left: 50%;
@@ -369,7 +369,7 @@ export class Bar implements BarView {
     middle.append(this.progress, this.time, this.noticeText, this.action)
 
     this.chunk = this.button('text chunk', 'Words at a time', () => actions.cycleChunk())
-    this.settingsButton = this.button('icon', 'Reading settings', () => this.toggleSettings(), ICONS.settings)
+    this.settingsButton = this.button('icon sliders', 'Reading settings', () => this.toggleSettings(), ICONS.settings)
     this.settingsButton.setAttribute('aria-expanded', 'false')
     const openTab = this.button('icon open', 'Open in a Pacer tab', () => actions.openTab(), ICONS.openTab)
     const close = this.button('icon', 'Stop reading', () => actions.close(), ICONS.close)
@@ -432,7 +432,7 @@ export class Bar implements BarView {
 
   /** Opens the settings panel over the bar, or closes it when it is open. */
   toggleSettings(): void {
-    if (this.closeSettings()) return
+    if (this.closeSettings() || this.panel.hasAttribute('data-loading')) return
     this.settings.hidden = false
     this.settingsButton.setAttribute('aria-expanded', 'true')
     this.doc.addEventListener('pointerdown', this.onPointerDown, true)

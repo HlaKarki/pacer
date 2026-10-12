@@ -96,6 +96,16 @@ describe('Bar', () => {
     expect(inBar('.panel').hasAttribute('data-notice')).toBe(false)
   })
 
+  test('keeps the settings panel shut until the first state arrives', () => {
+    const bar = Bar.mount(actions, document)
+    bar.notice('Reading page')
+    button('Reading settings').click()
+    expect([inBar('.settings').hidden, button('Reading settings').getAttribute('aria-expanded')]).toEqual([true, 'false'])
+    bar.render(STATE)
+    button('Reading settings').click()
+    expect([inBar('.settings').hidden, checked('Words at a time')]).toEqual([false, 'Phrase'])
+  })
+
   test('rises above furniture fixed to the bottom of the window, goes to the top past a third of it, and comes back down', () => {
     const now = spyOn(performance, 'now').mockReturnValue(10_000)
     Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true })
@@ -270,6 +280,7 @@ describe('Bar', () => {
     const bar = Bar.mount(actions, document)
     const panel = inBar('.panel')
     panel.getBoundingClientRect = () => (panel.style.top === '16px' ? box(16, 60) : box(830, 884))
+    bar.render(STATE)
     button('Reading settings').click()
     expect(panel.hasAttribute('data-top')).toBe(false)
     expect(inBar('.settings').style.maxHeight).toBe(`${830 - 8 - 16}px`)
