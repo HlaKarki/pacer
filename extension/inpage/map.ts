@@ -1,5 +1,6 @@
 import { BLOCK_SELECTOR, sourcedBlocksFromHtml, type HtmlOptions, type SourcedBlock } from '../../src/lib/import/html'
 import type { Doc } from '../../src/lib/text'
+import { OWN_HOST } from './dom'
 import { toneOf, type Tone } from './marks'
 
 /** Below this share of mapped words, the reader tab reads the page better than the page itself. */
@@ -8,7 +9,6 @@ export const MIN_COVERAGE = 0.85
 const GRAM = 3
 const LOOK = 24
 const REBUILD_MS = 1000
-const OWN_HOST = /^pacer-/
 const DIALOG = 'dialog, [role=dialog], [role=alertdialog], [aria-modal="true"]'
 
 /** Each word's token index on the page, or -1. Word triples found once in both lists anchor the match, and the words between anchors match forward, then backward. */
@@ -133,7 +133,7 @@ const cached = (test: (el: Element) => boolean) => {
 }
 
 /** Page words the Doc lacks cost nothing, so link lists stay in, and only text the reader cannot see is left out. */
-export function liveHtml(): HtmlOptions {
+function liveHtml(): HtmlOptions {
   return { skipLinkLists: false, skip: cached(hiddenOnPage), block: cached(blockOnPage) }
 }
 
@@ -143,7 +143,7 @@ export const isScroller = (el: Element) => {
 }
 
 /** Drops blocks that a "read more" box or similar clips away completely. A block clipped only in part stays. */
-export function dropClipped(blocks: SourcedBlock[]): SourcedBlock[] {
+function dropClipped(blocks: SourcedBlock[]): SourcedBlock[] {
   const clips = new Map<Element, boolean>()
   const clipping = (el: Element) => {
     let hit = clips.get(el)
@@ -183,7 +183,7 @@ interface Tokens {
   end: number[]
 }
 
-export function liveTokens(blocks: SourcedBlock[]): Tokens {
+function liveTokens(blocks: SourcedBlock[]): Tokens {
   const out: Tokens = { texts: [], block: [], start: [], end: [] }
   blocks.forEach(({ raw }, k) => {
     for (const match of raw.matchAll(/\S+/g)) {

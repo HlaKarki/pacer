@@ -167,7 +167,6 @@ function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, c
   return el
 }
 
-/** A closed shadow root on a fresh host at the end of the page, styled only by Pacer. */
 function mountHost(doc: Document, name: string): { host: HTMLElement; root: ShadowRoot } {
   const host = doc.createElement(name)
   const root = host.attachShadow({ mode: 'closed' })
@@ -207,7 +206,6 @@ function liftOver(doc: Document, panel: DOMRect): number {
   return lift
 }
 
-/** The floating controls for reading in place, at the bottom centre of the window. */
 export class Bar implements BarView {
   private readonly host: HTMLElement
   private readonly panel: HTMLElement

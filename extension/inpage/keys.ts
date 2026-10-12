@@ -1,10 +1,9 @@
 import { WPM_STEP } from '../../src/lib/settings'
 import { extensionGone } from './lifecycle'
+import { EDITABLE, fromPacer } from './dom'
 import type { WordMap } from './map'
 import type { StopReason } from './session'
 
-const OWN_HOST = /^pacer-/
-const EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role=textbox]'
 const ROLES = 'button link tab slider listbox menu menuitem tree grid combobox radio checkbox switch option spinbutton'
 const CONTROLS = ['a[href]', 'button', 'summary', 'video', 'audio', ...ROLES.split(' ').map((role) => `[role=${role}]`)].join(', ')
 const FOCUSABLE = '[tabindex]:not([tabindex="-1"])'
@@ -13,7 +12,6 @@ const OVERLAY = 'dialog[open], [aria-modal="true"], :popover-open, [role=dialog]
 const MODAL = 'dialog:modal, [aria-modal="true"]'
 const MENU = ':popover-open, [role=menu], [role=listbox]'
 
-/** What the reading keys drive. */
 export interface KeyTarget {
   readonly playing: boolean
   readonly bySentence: boolean
@@ -28,7 +26,6 @@ export interface KeyTarget {
   dispose(): void
 }
 
-/** What a click on the page drives. */
 export interface ClickTarget {
   readonly wordMap: WordMap | null
   /** True when the page replaced the text the reading is on. */
@@ -36,8 +33,6 @@ export interface ClickTarget {
   jump(i: number): void
   rebuildMap(): WordMap | null
 }
-
-const fromPacer = (e: Event) => e.composedPath().some((node) => OWN_HOST.test((node as Element).localName ?? ''))
 
 const isElement = (node: unknown): node is Element => (node as Node | null)?.nodeType === 1
 

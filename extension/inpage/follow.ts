@@ -1,3 +1,4 @@
+import { EDITABLE, fromPacer } from './dom'
 import { scrollerOf } from './start'
 
 /** Fraction of the viewport height where the active line rests. */
@@ -6,8 +7,6 @@ const GLIDE_MS = 280
 const JUMP_VIEWPORTS = 1.5
 const SIDE_MARGIN = 16
 const SCROLL_KEYS = new Set(['PageUp', 'PageDown', 'Home', 'End'])
-const EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])'
-const OWN_HOST = /^pacer-/
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
@@ -45,7 +44,6 @@ function sideScrollerOf(node: Node): Element | null {
   return null
 }
 
-const fromPacer = (e: Event) => e.composedPath().some((node) => OWN_HOST.test((node as Element).localName ?? ''))
 
 function onScrollbar(e: PointerEvent): boolean {
   const el = e.target as Element | null

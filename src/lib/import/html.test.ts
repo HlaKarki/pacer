@@ -88,7 +88,6 @@ describe('blocksFromHtml', () => {
   })
 })
 
-/** The text of a token in `raw`, read back from the nodes behind it. */
 function fromNodes(block: SourcedBlock, start: number, end: number): string {
   let out = ''
   for (const [k, { node, at }] of block.pieces.entries()) {

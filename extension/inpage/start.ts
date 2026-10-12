@@ -9,7 +9,6 @@ const MIN_SHOWN = 0.5
 export interface ViewportStart {
   /** The paragraph in view when the page is scrolled, 0 when it is not, or PAST_END. */
   from: number
-  /** The word to start reading at. */
   at: number
 }
 

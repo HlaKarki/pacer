@@ -3,12 +3,10 @@ import type { Article } from '../article'
 import { Toast } from './bar'
 import { InPageSession, type SessionOptions, type StopReason, type ToggleResult } from './session'
 
-/** What the toolbar press calls in the page. */
 export interface InPage {
   toggle(): Promise<ToggleResult>
 }
 
-/** The bar asks the service worker for a reader tab with what the page read. */
 export interface OpenTabMessage {
   type: 'pacer:open-tab'
   article: Article

@@ -62,9 +62,7 @@ export interface BarView {
 export interface SessionOptions {
   win?: Window
   mountBar?: (actions: BarActions) => BarView
-  /** Bar "Open in tab", and the action on notices that give up on the page. */
   openTab?: () => void
-  /** Bar "Read on" at the end of the page. */
   readOn?: () => void
   /** The fingerprint of the Doc that Read on came from, so the same Doc again waits at its end. */
   after?: string
@@ -154,7 +152,6 @@ export class InPageSession {
     return this.isPlaying
   }
 
-  /** The article as extracted at the start, for the reader tab. */
   get article(): Article | null {
     return this.source
   }
@@ -373,7 +370,6 @@ export class InPageSession {
     this.store.updateSettings({ chunk: CHUNK_ORDER[(at + 1) % CHUNK_ORDER.length] })
   }
 
-  /** Swaps in a fresh map of the page, for when the page re-rendered the text. */
   rebuildMap(): WordMap | null {
     if (!this.ready) return null
     this.map = this.map.rebuild()

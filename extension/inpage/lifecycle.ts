@@ -15,7 +15,6 @@ export function watchNavigation(win: Window, key: string, leave: () => void): ()
 }
 
 export interface PageWatch {
-  /** The tab went to the background. */
   hidden(): void
   /** The page is unloading or going into the back-forward cache. */
   gone(): void

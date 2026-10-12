@@ -96,7 +96,6 @@ describe('viewportStart', () => {
     const { doc, map } = setup(`# Long Essay\n\n${body}`, `<h1 data-top="0">Long Essay</h1><p data-top="40">${body}</p>`)
     scrolled = 1000
     const strip = HEIGHT * 0.15
-    // The first word whose line ends below the strip, found from its character offset.
     let offset = 0
     let firstInView = -1
     body.split(' ').forEach((word, k) => {

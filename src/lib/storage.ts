@@ -7,7 +7,6 @@ export {
   WPM_MAX,
   WPM_MIN,
   WPM_STEP,
-  type Mode,
   type Settings,
   type SettingsStore,
   type TextSize,

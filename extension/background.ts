@@ -152,7 +152,6 @@ async function startInPage(tab: chrome.tabs.Tab, tabId: number) {
   const result = await run(tabId, () => (globalThis as unknown as { __pacerInPage: InPage }).__pacerInPage.toggle())
   if (result.kind === 'started') await clearRefusal(tabId)
   else if (result.kind === 'fallback') await openReaderTab(tab, tabId, result.article)
-  // The page has shown its own message already, so the badge only marks the button.
   else if (result.kind === 'error') await refuse(tabId)
 }
 
