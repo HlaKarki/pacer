@@ -183,6 +183,19 @@ describe('WordMap', () => {
     expect(map.covered(range)).toBe(true)
   })
 
+  test('says the line is covered when only Pacer or nothing at all sits at its middle', () => {
+    const doc = parse(ARTICLE_TEXT)
+    const root = page(`${ARTICLE}<pacer-bar></pacer-bar>`)
+    const map = WordMap.build(doc, root)
+    RangeProto.getClientRects = () => [{ top: 300, height: 20, left: 100, width: 50 }] as unknown as DOMRectList
+    let stack: Element[] = []
+    document.elementsFromPoint = () => stack
+    const range = map.rangeOf(3, 4)!
+    expect(map.covered(range)).toBe(true)
+    stack = [root.querySelector('pacer-bar')!]
+    expect(map.covered(range)).toBe(true)
+  })
+
   test('rebuilds at most once a second', () => {
     const now = spyOn(performance, 'now').mockReturnValue(5000)
     const map = WordMap.build(parse(ARTICLE_TEXT), page(ARTICLE))

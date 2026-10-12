@@ -468,6 +468,66 @@ describe('InPageSession', () => {
     session.dispose()
   })
 
+  test('steps back onto the first shown word when the page shows none of the words before it', async () => {
+    page()
+    document.querySelector('h1')!.remove()
+    const { session, bar } = await begin()
+    session.pause()
+    expect([nowText(), nowPara()]).toEqual(['Paragraph', 1])
+    session.prevWord()
+    expect([nowText(), nowPara()]).toEqual(['Paragraph', 1])
+    expect(lastState(bar).notice).toBeNull()
+    session.dispose()
+  })
+
+  test('dims only what it reads after jumping back to before where this reading started', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session } = await begin()
+    await advance(1000)
+    expect(readText()).not.toBe('')
+    session.jump(docOf(session).paragraphs[3].start)
+    await advance(1000)
+    expect(nowPara()).toBe(3)
+    expect(para(3).startsWith(`${readText()} ${nowText()}`)).toBe(true)
+    session.dispose()
+  })
+
+  test('maps the page again when the page replaced the end of the next chunk', async () => {
+    data.settings = { chunk: 'sentence' }
+    page()
+    root.scrollTop = 1000
+    const { session, bar } = await begin()
+    session.pause()
+    ;(document.querySelector('[data-para="7"]')!.firstChild as Text).splitText('Paragraph 7 '.length)
+    const map = session.wordMap
+    await advance(1000)
+    session.jump(docOf(session).paragraphs[7].start)
+    expect(session.wordMap).not.toBe(map)
+    expect(nowText()).toBe(para(7))
+    expect(lastState(bar).notice).toBeNull()
+    session.dispose()
+  })
+
+  test('scrolls only when the reading moves on to a new line', async () => {
+    page()
+    root.scrollTop = 1000
+    let scrolls = 0
+    const scrollTo = root.scrollTo.bind(root)
+    root.scrollTo = ((options: ScrollToOptions) => {
+      scrolls++
+      scrollTo(options)
+    }) as typeof root.scrollTo
+    const { session } = await begin()
+    expect(scrolls).toBe(1)
+    await advance(1000)
+    expect(nowText()).not.toBe('Paragraph')
+    expect(nowPara()).toBe(6)
+    expect(scrolls).toBe(1)
+    session.dispose()
+    Reflect.deleteProperty(root, 'scrollTo')
+  })
+
   test('takes the reading keys and clicks only while it reads', async () => {
     page()
     const heard: string[] = []
