@@ -182,6 +182,19 @@ describe('Open in tab', () => {
     expect(toasts()).toBe(0)
   })
 
+  test('asks the service worker to read the page itself when the bar is pressed before the page is read', async () => {
+    const page = createInPage(win, (options) => Object.assign(fakeSession(options), { article: null }))
+    const pressed = page.toggle()
+    await tick()
+    made[0].options.openTab!()
+    await tick()
+    made[0].finish({ kind: 'stopped' })
+    await pressed
+    expect(made[0].stops).toEqual(['tab'])
+    expect(sent).toEqual([{ type: 'pacer:open-tab', article: null }])
+    expect(toasts()).toBe(0)
+  })
+
   test('says so in a toast when no tab opens', async () => {
     const page = createInPage(win, fakeSession)
     reply = async () => ({ ok: false })

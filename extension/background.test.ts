@@ -213,6 +213,14 @@ describe('open-tab message', () => {
     expect(created[0]).toMatchObject({ url: `chrome-extension://pacer/reader.html?doc=${records[0].id}`, index: 4, openerTabId: 8 })
   })
 
+  test('reads the page itself when the bar asks before the page was read', async () => {
+    const { reply } = await send({ type: 'pacer:open-tab', article: null }, { tab: tabOf(11), url: 'https://example.com/essay' })
+    expect(reply).toEqual({ ok: true })
+    expect(injected).toEqual(['extract.js'])
+    expect(records[0]).toMatchObject({ kind: 'article', title: 'How Eyes Read', text: 'Words to read.', startParagraph: 2 })
+    expect(created[0]).toMatchObject({ index: 4, openerTabId: 11 })
+  })
+
   test('ignores messages of another shape or from outside a tab', async () => {
     for (const message of [null, 'pacer:open-tab', { type: 'pacer:open-tab' }, { type: 'other', article }, { type: 'pacer:open-tab', article: { ...article, startParagraph: '7' } }]) {
       expect(onMessage(message, { tab: tabOf(9) }, () => undefined)).toBeUndefined()

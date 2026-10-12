@@ -9,7 +9,8 @@ export interface InPage {
 
 export interface OpenTabMessage {
   type: 'pacer:open-tab'
-  article: Article
+  /** Null while the page is still being read, so the service worker reads it itself. */
+  article: Article | null
 }
 
 export interface Session {
@@ -28,7 +29,7 @@ export function removeForeign(doc: Document): void {
   for (const name of [...CSS.highlights.keys()]) if (name.startsWith('pacer-')) CSS.highlights.delete(name)
 }
 
-async function askForTab(article: Article): Promise<boolean> {
+async function askForTab(article: Article | null): Promise<boolean> {
   const message: OpenTabMessage = { type: 'pacer:open-tab', article }
   try {
     const reply = (await chrome.runtime.sendMessage(message)) as { ok?: boolean } | undefined
@@ -49,7 +50,7 @@ export function createInPage(
     if (session !== current) return
     const article = current.article
     const { from } = await current.stop('tab')
-    if (article && !(await askForTab({ ...article, startParagraph: from }))) Toast.show(NO_TAB, win.document)
+    if (!(await askForTab(article && { ...article, startParagraph: from }))) Toast.show(NO_TAB, win.document)
   }
 
   async function readOn(current: Session) {

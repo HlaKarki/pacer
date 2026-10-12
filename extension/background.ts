@@ -178,8 +178,9 @@ async function openReaderTab(tab: chrome.tabs.Tab, tabId: number, article?: Arti
 
 function isOpenTab(message: unknown): message is OpenTabMessage {
   const { type, article } = (message ?? {}) as Partial<OpenTabMessage>
+  if (type !== 'pacer:open-tab') return false
+  if (article === null) return true
   return (
-    type === 'pacer:open-tab' &&
     typeof article?.text === 'string' &&
     (article.title === null || typeof article.title === 'string') &&
     Number.isInteger(article.startParagraph)
@@ -189,8 +190,8 @@ function isOpenTab(message: unknown): message is OpenTabMessage {
 function onMessage(message: unknown, sender: chrome.runtime.MessageSender, reply: (response: { ok: boolean }) => void) {
   const tab = sender.tab
   if (!isOpenTab(message) || tab?.id === undefined) return
-  const { title, text, startParagraph } = message.article
-  void openReaderTab({ ...tab, url: sender.url ?? tab.url }, tab.id, { title, text, startParagraph }).then((ok) => reply({ ok }))
+  const read = message.article && { title: message.article.title, text: message.article.text, startParagraph: message.article.startParagraph }
+  void openReaderTab({ ...tab, url: sender.url ?? tab.url }, tab.id, read ?? undefined).then((ok) => reply({ ok }))
   // Chrome closes the reply channel when the listener returns, unless it returns true.
   return true
 }
