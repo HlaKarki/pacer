@@ -117,6 +117,7 @@ export class InPageSession {
   private follow!: Follow
   private prefix: Float64Array = new Float64Array(1)
   private paced = { pauses: false, smart: false }
+  private chunkSize: ChunkSize = 1
   private unsubscribe: () => void = nothing
   private detachers: (() => void)[] = []
   private ready = false
@@ -211,6 +212,7 @@ export class InPageSession {
     this.doc = doc
     this.map = map
     this.prefix = this.pace(store.getSettings())
+    this.chunkSize = store.getSettings().chunk
     const again = this.after === fingerprintOf(doc)
     this.index = again ? doc.words.length - 1 : startFrom(doc, start.from, place, start.at)
     this.from = start.from
@@ -263,7 +265,10 @@ export class InPageSession {
     if (!this.ready) return
     const settings = this.settings()
     if (settings.pauses !== this.paced.pauses || settings.smart !== this.paced.smart) this.prefix = this.pace(settings)
-    this.render()
+    const resized = settings.chunk !== this.chunkSize
+    this.chunkSize = settings.chunk
+    if (resized && !this.isPlaying) this.run(1)
+    else this.render()
   }
 
   private onHidden = () => {

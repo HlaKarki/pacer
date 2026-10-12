@@ -680,6 +680,20 @@ describe('InPageSession', () => {
     document.removeEventListener('keydown', onPage)
   })
 
+  test('redraws the highlight at the new chunk size while paused', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, bar } = await begin()
+    session.pause()
+    expect(nowText()).toBe('Paragraph')
+    bar.actions!.cycleChunk()
+    expect(nowText()).toBe('Paragraph 6')
+    expect(session.playing).toBe(false)
+    await advance(2000)
+    expect(nowText()).toBe('Paragraph 6')
+    session.dispose()
+  })
+
   test('changes speed and chunk size through the shared settings', async () => {
     page()
     const { session, bar } = await begin()
