@@ -15,11 +15,16 @@ const isObject = (value: unknown): value is Record<string, unknown> => typeof va
 const isPlace = (value: unknown): value is Place =>
   isObject(value) && typeof value.index === 'number' && typeof value.words === 'number' && typeof value.from === 'number'
 
-/** A saved place wins unless reading now starts from a different paragraph than it did then. */
-export function startFrom(doc: Doc, from: number, saved: Place | undefined): number {
+/** A saved place wins unless reading now starts from a different paragraph than it did then. Otherwise reading starts at `at`. */
+export function startFrom(
+  doc: Doc,
+  from: number,
+  saved: Place | undefined,
+  at = doc.paragraphs[from]?.start ?? 0,
+): number {
   const last = Math.max(0, doc.words.length - 1)
   if (saved && saved.words === doc.words.length && saved.from === from) return Math.min(saved.index, last)
-  return Math.min(doc.paragraphs[from]?.start ?? 0, last)
+  return Math.min(at, last)
 }
 
 /** Settings and reading places in chrome.storage.local, shared by every Pacer tab. */
@@ -29,16 +34,25 @@ export class ExtensionStore implements SettingsStore {
   private listeners = new Set<() => void>()
   private pending = new Map<string, Place>()
   private timer: ReturnType<typeof setTimeout> | null = null
+  private unlisten: (() => void) | null = null
 
   static async load(): Promise<ExtensionStore> {
     const store = new ExtensionStore()
     const { settings } = await chrome.storage.local.get('settings')
     store.apply(isObject(settings) ? settings : {})
-    chrome.storage.onChanged.addListener((changes, area) => {
+    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       const change = changes.settings
       if (area === 'local' && change) store.apply(isObject(change.newValue) ? change.newValue : {})
-    })
+    }
+    chrome.storage.onChanged.addListener(onChanged)
+    store.unlisten = () => chrome.storage.onChanged.removeListener(onChanged)
     return store
+  }
+
+  /** A page can start and stop many readings, so each one releases its settings listener here. */
+  dispose() {
+    this.unlisten?.()
+    this.unlisten = null
   }
 
   getSettings = (): Settings => this.snapshot
@@ -65,8 +79,8 @@ export class ExtensionStore implements SettingsStore {
 
   setPlace(key: string, place: Place) {
     this.pending.set(key, place)
-    if (this.timer !== null) clearTimeout(this.timer)
-    this.timer = setTimeout(() => void this.flush(), SAVE_DELAY_MS)
+    // Playing moves the place several times a second, so a timer that restarted on every move would never fire.
+    this.timer ??= setTimeout(() => void this.flush(), SAVE_DELAY_MS)
   }
 
   async flush(): Promise<void> {
