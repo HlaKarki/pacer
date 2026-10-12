@@ -57,7 +57,6 @@ export interface BarActions {
   close(): void
 }
 
-/** Where the reading line sits in the window, top and bottom. */
 export interface LineBox {
   top: number
   bottom: number

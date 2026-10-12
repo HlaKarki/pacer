@@ -167,7 +167,7 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
 const onWord = (map: WordMap, i: number, x: number, y: number) =>
   [...(map.rangeOf(i, i + 1)?.getClientRects() ?? [])].some((r) => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom)
 
-/** A click on a word jumps there. Clicks on controls, Pacer's bar, text being selected, clicks that close a page menu or Pacer's settings panel and clicks that bring the window forward are left alone. */
+/** A click on a word moves the place there and starts an armed reading. Clicks on controls, Pacer's bar, text being selected, clicks that close a page menu or Pacer's settings panel and clicks that bring the window forward are left alone. */
 export function attachClicks(doc: Document, session: ClickTarget): () => void {
   const win = doc.defaultView
   let closing = false

@@ -392,7 +392,7 @@ export class Bar implements BarView {
     this.settings.append(this.chunkChoice.row, this.smartChoice.row, this.pausesChoice.row, this.autoStartChoice.row, this.shortcutList)
 
     panel.append(this.play, wpm, middle, this.chunk, this.settingsButton, this.settings, openTab, close)
-    // Keys typed with focus inside the bar never reach Pacer's page keys, so Esc closes the panel here too.
+    // Focus inside the bar is on Pacer's own controls, so the page keys skip it and Esc has to close the panel here.
     panel.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return
       this.escapeClosed = !this.settings.hidden
@@ -442,8 +442,7 @@ export class Bar implements BarView {
     else this.clearNotice()
   }
 
-  /** Opens the settings panel over the bar, or closes it when it is open. */
-  toggleSettings(): void {
+  private toggleSettings(): void {
     if (this.closeSettings() || this.panel.hasAttribute('data-loading')) return
     this.settings.hidden = false
     this.settingsButton.setAttribute('aria-expanded', 'true')
@@ -451,7 +450,6 @@ export class Bar implements BarView {
     this.fitSettings()
   }
 
-  /** False when the panel was already closed. */
   closeSettings(): boolean {
     if (this.settings.hidden) return false
     this.settings.hidden = true
