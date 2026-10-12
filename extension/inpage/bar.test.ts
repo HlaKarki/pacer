@@ -99,6 +99,27 @@ describe('Bar', () => {
     now.mockRestore()
   })
 
+  test('moves to the top while the reading line sits where the bar would be, and comes back down after', () => {
+    Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true })
+    document.body.innerHTML = '<p>Text</p>'
+    const box = (top: number, bottom: number, left = 0, right = 1440) => ({ top, bottom, left, right, height: bottom - top, width: right - left }) as DOMRect
+    document.elementsFromPoint = () => [document.querySelector('pacer-bar')!, document.querySelector('p')!, document.body]
+    const bar = Bar.mount(actions, document)
+    const panel = inBar('.panel')
+    panel.getBoundingClientRect = () => box(830, 884, 424, 1016)
+    const placed = () => [panel.style.top, panel.style.bottom]
+    bar.keepClear({ top: 300, bottom: 328 })
+    expect(placed()).toEqual(['', ''])
+    bar.keepClear({ top: 840, bottom: 868 })
+    expect(placed()).toEqual(['16px', 'auto'])
+    bar.render(STATE)
+    expect(placed()).toEqual(['16px', 'auto'])
+    bar.keepClear({ top: 300, bottom: 328 })
+    expect(placed()).toEqual(['', ''])
+    bar.keepClear(null)
+    expect(placed()).toEqual(['', ''])
+  })
+
   test('shows speed, chunk, time left and position', () => {
     const bar = Bar.mount(actions, document)
     bar.render(STATE)

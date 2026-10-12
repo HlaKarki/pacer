@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test'
 import { Window } from 'happy-dom'
 import { parse } from '../../src/lib/text'
-import { InPageSession, type BarActions, type BarState, type SessionOptions, type ToggleResult } from './session'
+import { InPageSession, type BarActions, type BarState, type LineBox, type SessionOptions, type ToggleResult } from './session'
 
 const window = new Window({ url: 'https://example.com/essay#intro' })
 globalThis.Node = window.Node as unknown as typeof Node
@@ -123,12 +123,13 @@ const advance = async (ms: number) => {
 }
 
 function fakeBar() {
-  const bar = { states: [] as BarState[], notices: [] as string[], disposed: false, actions: null as BarActions | null }
+  const bar = { states: [] as BarState[], notices: [] as string[], lines: [] as (LineBox | null)[], disposed: false, actions: null as BarActions | null }
   const mountBar = (actions: BarActions) => {
     bar.actions = actions
     return {
       render: (state: BarState) => void bar.states.push(state),
       notice: (text: string) => void bar.notices.push(text),
+      keepClear: (line: LineBox | null) => void bar.lines.push(line),
       dispose: () => void (bar.disposed = true),
     }
   }
@@ -681,6 +682,21 @@ describe('InPageSession', () => {
     space()
     expect(heard).toEqual([' '])
     document.removeEventListener('keydown', onPage)
+  })
+
+  test('tells the bar where the reading line settled, so the bar can keep clear of it', async () => {
+    page()
+    Object.defineProperty(root, 'scrollHeight', { value: 2400, configurable: true })
+    root.scrollTop = 1600
+    const { session, bar } = await begin()
+    session.pause()
+    session.jump(docOf(session).paragraphs[PARAGRAPHS].start)
+    runFrames()
+    const line = nowRange()!.getBoundingClientRect()
+    expect(nowPara()).toBe(PARAGRAPHS)
+    expect(bar.lines.at(-1)).toEqual({ top: line.top, bottom: line.bottom })
+    expect(line.top).toBeGreaterThan(HEIGHT * 0.5)
+    session.dispose()
   })
 
   test('redraws the highlight at the new chunk size while paused', async () => {

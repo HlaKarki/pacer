@@ -53,9 +53,16 @@ export interface BarActions {
   close(): void
 }
 
+/** Where the reading line sits in the window, top and bottom. */
+export interface LineBox {
+  top: number
+  bottom: number
+}
+
 export interface BarView {
   render(state: BarState): void
   notice(text: string, action?: NoticeAction): void
+  keepClear(line: LineBox | null): void
   dispose(): void
 }
 
@@ -83,6 +90,7 @@ const FINGERPRINT_WORDS = 50
 const NO_BAR: BarView = {
   render: () => undefined,
   notice: () => undefined,
+  keepClear: () => undefined,
   dispose: () => undefined,
 }
 const nothing = () => undefined
@@ -551,6 +559,8 @@ export class InPageSession {
   private onLine = () => {
     const start = viewportStart(this.doc, this.map, this.win)
     if (start) this.from = start.from
+    const line = this.map.rangeOf(this.chunk.start, this.chunk.end)?.getBoundingClientRect()
+    if (line) this.bar.keepClear({ top: line.top, bottom: line.bottom })
     this.checkCovered()
   }
 

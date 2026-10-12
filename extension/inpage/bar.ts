@@ -1,5 +1,5 @@
 import { formatDuration } from '../../src/lib/timing'
-import type { BarActions, BarState, BarView, NoticeAction } from './session'
+import type { BarActions, BarState, BarView, LineBox, NoticeAction } from './session'
 
 type IconPart = ['path', string] | ['rect', number, number, number, number]
 
@@ -32,6 +32,7 @@ const TOAST_MS = 4000
 const EDGE = 16
 const PLACE_MS = 1000
 const MAX_LIFT = 1 / 3
+const DOCK_FADE_MS = 160
 const SVG = 'http://www.w3.org/2000/svg'
 
 const TOKENS = `
@@ -222,6 +223,8 @@ export class Bar implements BarView {
   private playing: boolean | null = null
   private noticeAction: NoticeAction | null = null
   private placedAt = -Infinity
+  private line: LineBox | null = null
+  private atTop = false
 
   private constructor(actions: BarActions, doc: Document) {
     this.doc = doc
@@ -302,24 +305,39 @@ export class Bar implements BarView {
     }
   }
 
+  /** Moves the bar to the top while the reading line sits where the bar would be, like the last lines of a page. */
+  keepClear(line: LineBox | null): void {
+    this.line = line
+    this.place()
+  }
+
   dispose(): void {
     this.doc.defaultView?.removeEventListener('resize', this.place)
     this.host.remove()
   }
 
-  /** Lifts the bar over furniture pinned to the bottom of the window, or moves it to the top when that is too tall. */
+  /** Lifts the bar over furniture pinned to the bottom of the window, or moves it to the top when that is too tall or the reading line is there. */
   private place = () => {
     this.placedAt = performance.now()
     const { style } = this.panel
     style.top = style.bottom = ''
     const rect = this.panel.getBoundingClientRect()
-    const height = this.doc.defaultView?.innerHeight ?? 0
+    const win = this.doc.defaultView
+    const height = win?.innerHeight ?? 0
     const lift = rect.height > 0 ? liftOver(this.doc, rect) : 0
-    if (lift > height * MAX_LIFT) {
+    const bottom = lift > 0 ? height - lift : rect.bottom
+    const underLine = rect.height > 0 && this.line !== null && this.line.bottom > bottom - rect.height && this.line.top < bottom
+    const top = lift > height * MAX_LIFT || underLine
+    if (top) {
       style.top = `${EDGE}px`
       style.bottom = 'auto'
     } else if (lift > 0) {
       style.bottom = `${lift}px`
+    }
+    if (top === this.atTop) return
+    this.atTop = top
+    if (!win?.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      this.panel.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: DOCK_FADE_MS, easing: 'ease-out' })
     }
   }
 
