@@ -14,6 +14,8 @@ export interface Opened {
   /** The 1-based page of each paragraph, for PDFs that came from a tab. */
   pages: number[] | null
   startParagraph: number
+  /** Text picked with "Read from here with Pacer", or null. */
+  startText: string | null
   /** Saved places are kept under this. */
   key: string
 }
@@ -43,7 +45,7 @@ export async function openDoc(id: string, onProgress: (message: string) => void)
   if (record.error?.fileAccess) throw new FileAccessError()
   if (record.error) throw new ImportError(record.error.message)
 
-  const base = { src: record.src, key: withoutHash(record.src) }
+  const base = { src: record.src, key: withoutHash(record.src), startText: record.startText ?? null }
   if (record.kind === 'article') {
     const title = record.title ?? nameFromUrl(record.src) ?? 'Untitled'
     return { ...base, title, text: record.text ?? '', pages: null, startParagraph: record.startParagraph ?? 0 }
@@ -75,5 +77,5 @@ export async function openFile(file: File, onProgress: (message: string) => void
   }
   const fallback = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || 'Untitled'
   const { title, text } = withTitle(imported, fallback)
-  return { title: title ?? fallback, text, src: null, pages: null, startParagraph: 0, key: `picked:${file.name}:${file.size}` }
+  return { title: title ?? fallback, text, src: null, pages: null, startParagraph: 0, startText: null, key: `picked:${file.name}:${file.size}` }
 }

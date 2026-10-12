@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Re
 import { FileUp } from 'lucide-react'
 import { ReaderScreen } from '../src/components/ReaderScreen'
 import { ImportError } from '../src/lib/import/errors'
-import { parse, type Doc } from '../src/lib/text'
+import { findText, parse, type Doc } from '../src/lib/text'
 import { revealParagraph, showPdfPage, sourceOf, switchTo, type Source } from './back'
 import { frequency } from './frequency'
 import { paragraphOnPage, withPage } from './pages'
@@ -136,10 +136,13 @@ export function App({ store, docId }: { store: ExtensionStore; docId: string | n
         if (id === opens.current) setScreen({ kind: 'busy', message })
       }
       try {
-        const opened = await open(onProgress)
+        let opened = await open(onProgress)
         const doc = parse(opened.text)
         if (!doc.words.length) throw new ImportError('There is nothing to read in this document.')
-        const index = startFrom(doc, opened.startParagraph, await store.place(opened.key))
+        const found = opened.startText ? findText(doc, opened.startText) : -1
+        // Places save against startParagraph, so it moves to the picked word's paragraph too.
+        if (found >= 0) opened = { ...opened, startParagraph: doc.words[found].para }
+        const index = found >= 0 ? found : startFrom(doc, opened.startParagraph, await store.place(opened.key))
         if (id !== opens.current) return
         reading.current = { opened, doc, index }
         document.title = opened.title

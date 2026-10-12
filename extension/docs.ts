@@ -10,6 +10,8 @@ export interface DocRecord {
   text?: string
   /** Paragraph at the top of the window when Pacer was pressed. */
   startParagraph?: number
+  /** Text picked with "Read from here with Pacer". */
+  startText?: string
   error?: { message: string; fileAccess?: boolean }
   at: number
 }
