@@ -9,6 +9,11 @@ interface Probe {
   url: string
 }
 
+/** A right-click menu press, with the selected text or null when nothing was selected. */
+interface MenuStart {
+  text: string | null
+}
+
 class PaceError extends Error {
   name = 'PaceError'
 }
@@ -20,6 +25,8 @@ const PICKER_PAGES = /^(chrome:\/\/(newtab|new-tab-page)\/?|about:blank)$/
 const PRESS_GAP_MS = 300
 const IN_PAGE_TYPES = new Set(['text/html', 'application/xhtml+xml', 'text/plain'])
 const DEFAULT_TITLE = chrome.runtime.getManifest().action?.default_title ?? 'Pace this page'
+const MENU_PAGE = 'pace-page'
+const MENU_SELECTION = 'pace-selection'
 const lastPress = new Map<number, number>()
 
 async function run<Args extends unknown[], Result>(
@@ -147,18 +154,27 @@ async function ensureInPage(tabId: number) {
   await chrome.scripting.executeScript({ target: { tabId }, files: ['inpage.js'] })
 }
 
-async function startInPage(tab: chrome.tabs.Tab, tabId: number) {
+async function startInPage(tab: chrome.tabs.Tab, tabId: number, start?: MenuStart) {
   await ensureInPage(tabId)
-  const result = await run(tabId, () => (globalThis as unknown as { __pacerInPage: InPage }).__pacerInPage.toggle())
+  const result = await run(
+    tabId,
+    (menu: boolean, text: string | null) => {
+      const page = (globalThis as unknown as { __pacerInPage: InPage }).__pacerInPage
+      return menu ? page.readFrom(text) : page.toggle()
+    },
+    start !== undefined,
+    start?.text ?? null,
+  )
   if (result.kind === 'started') await clearRefusal(tabId)
-  else if (result.kind === 'fallback') await openReaderTab(tab, tabId, result.article)
+  else if (result.kind === 'fallback') await openReaderTab(tab, tabId, result.article, start?.text ?? undefined)
   else if (result.kind === 'error') await refuse(tabId)
 }
 
 /** With the article the page already read, the tab skips reading the page again. */
-async function openReaderTab(tab: chrome.tabs.Tab, tabId: number, article?: Article): Promise<boolean> {
+async function openReaderTab(tab: chrome.tabs.Tab, tabId: number, article?: Article, startText?: string): Promise<boolean> {
   try {
     const record = await recordFor(tab, tabId, article)
+    if (startText) record.startText = startText
     await putDoc(record)
     await rememberSource(record.id, { tabId, src: record.src })
     await chrome.tabs.create({
@@ -196,7 +212,7 @@ function onMessage(message: unknown, sender: chrome.runtime.MessageSender, reply
   return true
 }
 
-async function paceTab(tab: chrome.tabs.Tab) {
+async function paceTab(tab: chrome.tabs.Tab, start?: MenuStart) {
   const tabId = tab.id
   if (tabId === undefined || tab.url?.startsWith(READER)) return
   if (PICKER_PAGES.test(tab.url ?? '')) {
@@ -206,7 +222,7 @@ async function paceTab(tab: chrome.tabs.Tab) {
   if (pressedRecently(tabId)) return
   try {
     if ((await routeOf(tab, tabId)) === 'page') {
-      await startInPage(tab, tabId)
+      await startInPage(tab, tabId, start)
       return
     }
   } catch (error) {
@@ -215,11 +231,26 @@ async function paceTab(tab: chrome.tabs.Tab) {
     await refuse(tabId)
     return
   }
-  await openReaderTab(tab, tabId)
+  await openReaderTab(tab, tabId, undefined, start?.text ?? undefined)
+}
+
+// Menus outlive an extension reload, so clear them first or the second create fails on its duplicate id.
+async function setUpMenus() {
+  await chrome.contextMenus.removeAll()
+  chrome.contextMenus.create({ id: MENU_PAGE, title: 'Read with Pacer', contexts: ['page'] })
+  chrome.contextMenus.create({ id: MENU_SELECTION, title: 'Read from here with Pacer', contexts: ['selection'] })
+}
+
+async function onMenu(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) {
+  if (!tab) return
+  if (info.menuItemId === MENU_PAGE) await paceTab(tab, { text: null })
+  else if (info.menuItemId === MENU_SELECTION) await paceTab(tab, { text: info.selectionText ?? null })
 }
 
 chrome.action.onClicked.addListener((tab) => void paceTab(tab))
 chrome.runtime.onMessage.addListener(onMessage)
+chrome.runtime.onInstalled.addListener(() => void setUpMenus())
+chrome.contextMenus.onClicked.addListener((info, tab) => void onMenu(info, tab))
 
-// Nothing can press the toolbar button in an automated browser, so the e2e run calls this instead.
-Object.assign(globalThis, { paceTab })
+// Nothing can press the toolbar button or open a menu in an automated browser, so the e2e run calls these instead.
+Object.assign(globalThis, { paceTab, onMenu })

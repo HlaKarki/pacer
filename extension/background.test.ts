@@ -10,6 +10,9 @@ let created: chrome.tabs.CreateProperties[]
 let badges: Record<number, { text: string; title: string }>
 let injected: string[]
 let toggles: number
+let readFroms: (string | null)[]
+let menus: unknown[]
+let onInstalled: () => void
 let toggleResult: ToggleResult
 let refuseScripts: boolean
 let fileAccess: boolean
@@ -29,6 +32,12 @@ const fakeChrome = {
     getURL: (path: string) => `chrome-extension://pacer/${path}`,
     getManifest: () => ({ action: { default_title: 'Pace this page' } }),
     onMessage: { addListener: (listener: typeof onMessage) => void (onMessage = listener) },
+    onInstalled: { addListener: (listener: () => void) => void (onInstalled = listener) },
+  },
+  contextMenus: {
+    removeAll: async () => void menus.push('removeAll'),
+    create: (item: chrome.contextMenus.CreateProperties) => void menus.push(item),
+    onClicked: { addListener: () => undefined },
   },
   action: {
     onClicked: { addListener: () => undefined },
@@ -49,6 +58,10 @@ const fakeChrome = {
               toggles++
               return toggleResult
             },
+            readFrom: async (text: string | null) => {
+              readFroms.push(text)
+              return toggleResult
+            },
           }
         }
         if (files.includes('extract.js')) {
@@ -67,6 +80,7 @@ const fakeChrome = {
 }
 
 let paceTab: (tab: chrome.tabs.Tab) => Promise<void>
+let onMenu: (info: Partial<chrome.contextMenus.OnClickData>, tab?: chrome.tabs.Tab) => Promise<void>
 let now = 1_000_000
 const later = (ms = 1000) => setSystemTime((now += ms))
 const tabOf = (id: number, url = 'https://example.com/essay') => ({ id, url, index: 3, windowId: 1, title: 'Essay' }) as chrome.tabs.Tab
@@ -75,11 +89,12 @@ beforeAll(async () => {
   Object.assign(globalThis, { chrome: fakeChrome })
   await import('./background')
   paceTab = scope.paceTab as typeof paceTab
+  onMenu = scope.onMenu as typeof onMenu
 })
 
 afterAll(() => {
   setSystemTime()
-  for (const name of ['chrome', 'paceTab', 'document', 'location', '__pacerInPage', '__pacerExtract']) Reflect.deleteProperty(globalThis, name)
+  for (const name of ['chrome', 'paceTab', 'onMenu', 'document', 'location', '__pacerInPage', '__pacerExtract']) Reflect.deleteProperty(globalThis, name)
 })
 
 beforeEach(() => {
@@ -88,6 +103,8 @@ beforeEach(() => {
   badges = {}
   injected = []
   toggles = 0
+  readFroms = []
+  menus = []
   toggleResult = { kind: 'started' }
   refuseScripts = false
   fileAccess = true
@@ -191,6 +208,49 @@ describe('paceTab', () => {
     await paceTab(tabOf(7, 'https://chromewebstore.google.com/'))
     expect(badges[7]?.text).toBe('!')
     quiet.mockRestore()
+  })
+})
+
+describe('right-click menu', () => {
+  test('adds Read with Pacer and Read from here once installed, clearing the old items first', async () => {
+    onInstalled()
+    for (let k = 0; k < 5; k++) await Promise.resolve()
+    expect(menus).toEqual([
+      'removeAll',
+      { id: 'pace-page', title: 'Read with Pacer', contexts: ['page'] },
+      { id: 'pace-selection', title: 'Read from here with Pacer', contexts: ['selection'] },
+    ])
+  })
+
+  test('reads an HTML page in place from the selection, or from the view with nothing selected, without toggling', async () => {
+    await onMenu({ menuItemId: 'pace-selection', selectionText: 'gated recurrent' }, tabOf(40))
+    later()
+    await onMenu({ menuItemId: 'pace-page' }, tabOf(40))
+    expect(readFroms).toEqual(['gated recurrent', null])
+    expect(toggles).toBe(0)
+    expect(created).toEqual([])
+  })
+
+  test('opens the reader tab for a PDF with the selected text to start from', async () => {
+    page.contentType = 'application/pdf'
+    const offline = spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('gone', { status: 404 }))
+    await onMenu({ menuItemId: 'pace-selection', selectionText: 'Recurrent neural\nnetworks' }, tabOf(41, 'https://arxiv.org/pdf/1706.03762'))
+    offline.mockRestore()
+    expect(records[0]).toMatchObject({ kind: 'pdf', startText: 'Recurrent neural\nnetworks' })
+    expect(created[0]).toMatchObject({ openerTabId: 41 })
+  })
+
+  test('hands the selected text on to the reader tab when the page cannot be mapped', async () => {
+    toggleResult = { kind: 'fallback', article: { title: null, text: 'Words the page showed.', startParagraph: 4 }, coverage: 0.4 }
+    await onMenu({ menuItemId: 'pace-selection', selectionText: 'showed' }, tabOf(42))
+    expect(records[0]).toMatchObject({ kind: 'article', startParagraph: 4, startText: 'showed' })
+  })
+
+  test('leaves Pacer’s own reader tab and unknown items alone', async () => {
+    await onMenu({ menuItemId: 'pace-selection', selectionText: 'words' }, tabOf(43, 'chrome-extension://pacer/reader.html?doc=1'))
+    await onMenu({ menuItemId: 'other' }, tabOf(44))
+    await onMenu({ menuItemId: 'pace-page' })
+    expect([readFroms, toggles, created, records]).toEqual([[], 0, [], []])
   })
 })
 
