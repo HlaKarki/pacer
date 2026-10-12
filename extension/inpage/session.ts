@@ -295,7 +295,7 @@ export class InPageSession {
     if (settings.pauses !== this.paced.pauses || settings.smart !== this.paced.smart) this.prefix = this.pace(settings)
     const resized = settings.chunk !== this.chunkSize
     this.chunkSize = settings.chunk
-    if (resized && !this.isPlaying) this.run(1)
+    if (resized && !this.isPlaying) this.run(1, false)
     else this.render()
   }
 
@@ -502,13 +502,13 @@ export class InPageSession {
     this.step()
   }
 
-  private run(dir: 1 | -1) {
+  private run(dir: 1 | -1, scroll = true) {
     if (extensionGone()) {
       this.dispose()
       return
     }
     try {
-      if (!this.show(dir) || !this.isPlaying) return
+      if (!this.show(dir, scroll) || !this.isPlaying) return
       const { wpm, chunk } = this.settings()
       this.timer = setTimeout(this.advance, chunkDelayMs(this.prefix, this.chunk, wpm, chunk, this.sincePlay))
     } catch (error) {
@@ -548,22 +548,22 @@ export class InPageSession {
     return -1
   }
 
-  /** Highlights the chunk at the index, scrolling to it on a new line, and saves the place. False when it paused instead. */
-  private show(dir: 1 | -1): boolean {
+  /** Highlights the chunk at the index, scrolling to it on a new line unless told not to, and saves the place. False when it paused instead. */
+  private show(dir: 1 | -1, scroll = true): boolean {
     const { doc, map } = this
     const shown = this.shownFrom(this.index, dir)
     if (shown < 0) {
       this.finish()
       return false
     }
-    if (!map.isLive(shown, shown + 1)) return this.remap(dir)
+    if (!map.isLive(shown, shown + 1)) return this.remap(dir, scroll)
     const i = map.hasRects(shown) ? shown : this.withRects(shown, dir)
     if (i < 0) {
       this.pause(LOST)
       return false
     }
     const chunk = chunkAt(doc, i, this.settings().chunk, (j) => (map.sameLine(i, j) ? 0 : 1))
-    if (!map.isLive(chunk.start, chunk.end)) return this.remap(dir)
+    if (!map.isLive(chunk.start, chunk.end)) return this.remap(dir, scroll)
     this.index = i
     this.chunk = chunk
     const range = map.rangeOf(this.chunk.start, this.chunk.end)
@@ -578,8 +578,8 @@ export class InPageSession {
       if (inView(range)) {
         this.follow.watch(range)
         this.onLine()
-      } else this.follow.toLine(range, this.onLine)
-    } else if (this.lineAt < 0 || !map.sameLine(this.lineAt, i)) {
+      } else if (scroll) this.follow.toLine(range, this.onLine)
+    } else if (scroll && (this.lineAt < 0 || !map.sameLine(this.lineAt, i))) {
       this.lineAt = i
       this.follow.toLine(range, this.onLine)
     }
@@ -589,11 +589,11 @@ export class InPageSession {
   }
 
   /** The page replaced the text, so map it again once the throttle allows, keeping the index where it is until then. */
-  private remap(dir: 1 | -1): boolean {
+  private remap(dir: 1 | -1, scroll: boolean): boolean {
     if (!this.map.canRebuild()) {
       this.timer = setTimeout(() => {
         this.timer = null
-        this.run(dir)
+        this.run(dir, scroll)
       }, this.map.nextRebuildIn())
       return false
     }
@@ -602,7 +602,7 @@ export class InPageSession {
       this.pause(CHANGED)
       return false
     }
-    return this.show(dir)
+    return this.show(dir, scroll)
   }
 
   // A press after an extension reload resumes only when the saved paragraph matches the view, so keep it current as lines change.

@@ -847,6 +847,21 @@ describe('InPageSession', () => {
     session.dispose()
   })
 
+  test('leaves the page where the reader scrolled it when the chunk changes while armed, and starts from the view', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, bar } = await begin()
+    document.querySelector('[data-para="6"]')!.dispatchEvent(new window.WheelEvent('wheel', { bubbles: true, deltaY: 40 }) as unknown as Event)
+    root.scrollTop = 1600
+    bar.actions!.update({ chunk: 2 })
+    expect([nowText(), root.scrollTop]).toEqual(['Paragraph 6', 1600])
+    for (const listener of listeners) listener({ settings: { newValue: { chunk: 3 } } }, 'local')
+    expect([nowText(), root.scrollTop]).toEqual(['Paragraph 6 opens', 1600])
+    session.play()
+    expect([nowText(), nowPara()]).toEqual(['Paragraph 9 opens', 9])
+    session.dispose()
+  })
+
   test('changes pacing, chunk and Start on press from the settings panel through the shared settings', async () => {
     page()
     root.scrollTop = 1000
