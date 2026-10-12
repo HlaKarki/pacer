@@ -188,6 +188,24 @@ describe('attachKeys', () => {
     expect(pageHeard).toEqual(['keydown:Escape', 'keyup:Escape', 'keydown:Escape', 'keyup:Escape'])
   })
 
+  test('leaves Esc to open menus and lightboxes, and to the control that opened one', () => {
+    const escape = (target: Element) => press(target, 'Escape')
+    document.body.insertAdjacentHTML('beforeend', '<div id="lightbox" role="dialog"><img alt="Photo"></div>')
+    escape(document.body)
+    $('#lightbox').remove()
+    document.body.insertAdjacentHTML('beforeend', '<ul id="menu" role="menu"><li role="menuitem">One</li></ul>')
+    escape(document.body)
+    $('#menu').remove()
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<button id="opener" aria-expanded="true">HTML</button><div aria-expanded="true"><div id="item" tabindex="-1">Item</div></div>',
+    )
+    escape($('#opener'))
+    escape($('#item'))
+    expect(calls).toEqual([])
+    expect(pageHeard.filter((heard) => heard === 'keydown:Escape').length).toBe(4)
+  })
+
   test('leaves shortcuts, IME input and keys from Pacer’s own bar alone', () => {
     press(document.body, ' ', { metaKey: true })
     press(document.body, 'ArrowRight', { ctrlKey: true })

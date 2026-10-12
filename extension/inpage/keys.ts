@@ -9,7 +9,7 @@ const ROLES = 'button link tab slider listbox menu menuitem tree grid combobox r
 const CONTROLS = ['a[href]', 'button', 'summary', 'video', 'audio', ...ROLES.split(' ').map((role) => `[role=${role}]`)].join(', ')
 const FOCUSABLE = '[tabindex]:not([tabindex="-1"])'
 const CLICKABLE = `${CONTROLS}, ${EDITABLE}, label`
-const MODAL = 'dialog[open], [aria-modal="true"], :popover-open'
+const OVERLAY = 'dialog[open], [aria-modal="true"], :popover-open, [role=dialog], [role=alertdialog], [role=menu], [role=listbox]'
 
 /** What the reading keys drive. */
 export interface KeyTarget {
@@ -66,7 +66,10 @@ export function deepFocus(e: Event, doc: Document): Element | null {
   return el
 }
 
-const modalOpen = (doc: Document) => [...doc.querySelectorAll(MODAL)].some((el) => el.checkVisibility())
+const overlayOpen = (doc: Document) => [...doc.querySelectorAll(OVERLAY)].some((el) => el.checkVisibility())
+
+// Wikipedia keeps some aria-expanded buttons open for good, so only focus inside an open control counts.
+const inOpenControl = (el: Element | null) => el?.closest('[aria-expanded="true"]') != null
 
 /** Space, the arrows and Esc while Pacer reads the page. Keys it handles never reach the page, and the rest pass through. */
 export function attachKeys(win: Window, session: KeyTarget): () => void {
@@ -77,11 +80,11 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
 
   const actionFor = (e: KeyboardEvent): (() => void) | null => {
     const focus = deepFocus(e, doc)
+    if (!isReadingFocus(focus, focus === clicked)) return null
     if (e.key === 'Escape') {
-      if (modalOpen(doc) || (focus && editable(focus))) return null
+      if (overlayOpen(doc) || inOpenControl(focus)) return null
       return () => (session.playing ? session.pause() : void session.stop('esc'))
     }
-    if (!isReadingFocus(focus, focus === clicked)) return null
     switch (e.key) {
       case ' ':
         // A held Space would flicker between play and pause, so only the first press counts.
