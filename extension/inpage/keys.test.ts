@@ -207,6 +207,17 @@ describe('attachKeys', () => {
     expect(pageHeard).toEqual([])
   })
 
+  test('Esc closes the settings panel while the page shows a dialog that does not hold focus', () => {
+    document.body.insertAdjacentHTML('beforeend', '<div id="chat" role="dialog">Chat with us</div>')
+    session.settingsOpen = true
+    press(document.body, 'Escape')
+    expect(calls).toEqual(['closeSettings'])
+    expect(pageHeard).toEqual([])
+    press(document.body, 'Escape')
+    expect(calls).toEqual(['closeSettings'])
+    expect(pageHeard).toEqual(['keydown:Escape', 'keyup:Escape'])
+  })
+
   test('keeps the keys while Pacer’s own bar and toast sit in the top layer', () => {
     const close = ownHostsOpen()
     press(document.body, ' ')
