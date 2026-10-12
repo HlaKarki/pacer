@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, jest, spyOn, test } from 'bun:test'
 import { Window } from 'happy-dom'
 import { Bar, Toast } from './bar'
 import type { BarActions, BarState } from './session'
@@ -66,6 +66,37 @@ describe('Bar', () => {
     bar.render(STATE)
     expect(inBar('.panel').hasAttribute('data-loading')).toBe(false)
     expect(inBar('.panel').hasAttribute('data-notice')).toBe(false)
+  })
+
+  test('rises above furniture fixed to the bottom of the window, goes to the top past a third of it, and comes back down', () => {
+    const now = spyOn(performance, 'now').mockReturnValue(10_000)
+    Object.defineProperty(window, 'innerHeight', { value: 900, configurable: true })
+    document.body.innerHTML = '<div id="cookie" style="position: fixed; bottom: 0"><button>Accept all</button></div><p>Text</p>'
+    const banner = document.getElementById('cookie')!
+    const box = (top: number, bottom: number, left = 0, right = 1440) => ({ top, bottom, left, right, height: bottom - top, width: right - left }) as DOMRect
+    let bannerTop = 788
+    banner.getBoundingClientRect = () => box(bannerTop, 900)
+    let under: Element[] = [banner.querySelector('button')!]
+    document.elementsFromPoint = () => [document.querySelector('pacer-bar')!, ...under, document.body]
+    const bar = Bar.mount(actions, document)
+    const panel = inBar('.panel')
+    panel.getBoundingClientRect = () => box(830, 884, 424, 1016)
+    const placed = () => [panel.style.top, panel.style.bottom]
+    now.mockReturnValue(11_000)
+    bar.render(STATE)
+    expect(placed()).toEqual(['', '128px'])
+    bannerTop = 500
+    now.mockReturnValue(11_500)
+    bar.render(STATE)
+    expect(placed()).toEqual(['', '128px'])
+    now.mockReturnValue(12_000)
+    bar.render(STATE)
+    expect(placed()).toEqual(['16px', 'auto'])
+    under = [document.querySelector('p')!]
+    now.mockReturnValue(13_000)
+    bar.render(STATE)
+    expect(placed()).toEqual(['', ''])
+    now.mockRestore()
   })
 
   test('shows speed, chunk, time left and position', () => {

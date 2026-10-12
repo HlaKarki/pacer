@@ -29,6 +29,9 @@ const ICONS = {
 const CHUNK_LABELS: Record<string, string> = { 1: '1 word', 2: '2 words', 3: '3 words', phrase: 'Phrase', sentence: 'Sentence' }
 const ACTION_LABELS: Record<NoticeAction, string> = { openTab: 'Open in tab', readOn: 'Read on' }
 const TOAST_MS = 4000
+const EDGE = 16
+const PLACE_MS = 1000
+const MAX_LIFT = 1 / 3
 const SVG = 'http://www.w3.org/2000/svg'
 
 const TOKENS = `
@@ -178,6 +181,32 @@ function mountHost(doc: Document, name: string): { host: HTMLElement; root: Shad
 // A click would focus the bar's button and Space would then press it, so keep focus on the page.
 const keepFocus = (e: Event) => e.preventDefault()
 
+/** The page box pinned to the window that holds el, like a cookie banner or a sticky footer. */
+function pinnedBox(el: Element): Element | null {
+  const win = el.ownerDocument.defaultView
+  for (let box: Element | null = el; box && box !== el.ownerDocument.body; box = box.parentElement) {
+    const style = win?.getComputedStyle(box)
+    if (style?.position === 'fixed' || (style?.position === 'sticky' && style.bottom !== 'auto')) return box
+  }
+  return null
+}
+
+/** How far up the bar must sit to clear page furniture pinned under it, or 0 when nothing is there. */
+function liftOver(doc: Document, panel: DOMRect): number {
+  const height = doc.defaultView?.innerHeight ?? 0
+  const bottom = height - EDGE
+  let lift = 0
+  for (const x of [panel.left + 8, (panel.left + panel.right) / 2, panel.right - 8]) {
+    for (const y of [bottom - panel.height + 4, bottom - panel.height / 2, bottom - 4]) {
+      const under = doc.elementsFromPoint(x, y).find((el) => !el.localName.startsWith('pacer-'))
+      const box = under ? pinnedBox(under)?.getBoundingClientRect() : undefined
+      // A box over half the window is a modal or a side nav, which the bar cannot get out from under.
+      if (box && box.height < height / 2) lift = Math.max(lift, height - box.top + EDGE)
+    }
+  }
+  return lift
+}
+
 /** The floating controls for reading in place, at the bottom centre of the window. */
 export class Bar implements BarView {
   private readonly host: HTMLElement
@@ -194,6 +223,7 @@ export class Bar implements BarView {
   private readonly actions: BarActions
   private playing: boolean | null = null
   private noticeAction: NoticeAction | null = null
+  private placedAt = -Infinity
 
   private constructor(actions: BarActions, doc: Document) {
     this.doc = doc
@@ -238,6 +268,8 @@ export class Bar implements BarView {
     panel.append(this.play, wpm, middle, this.chunk, openTab, close)
     root.append(panel)
     this.setPlaying(false)
+    this.place()
+    doc.defaultView?.addEventListener('resize', this.place)
   }
 
   static mount(actions: BarActions, doc: Document = document): Bar {
@@ -245,6 +277,8 @@ export class Bar implements BarView {
   }
 
   render(state: BarState): void {
+    // Cookie banners and the like come and go after the page loads, so look again now and then.
+    if (performance.now() - this.placedAt >= PLACE_MS) this.place()
     delete this.panel.dataset.loading
     this.setPlaying(state.playing)
     this.wpm.replaceChildren(element(this.doc, 'strong', '', String(state.wpm)), ' wpm')
@@ -271,7 +305,24 @@ export class Bar implements BarView {
   }
 
   dispose(): void {
+    this.doc.defaultView?.removeEventListener('resize', this.place)
     this.host.remove()
+  }
+
+  /** Lifts the bar over furniture pinned to the bottom of the window, or moves it to the top when that is too tall. */
+  private place = () => {
+    this.placedAt = performance.now()
+    const { style } = this.panel
+    style.top = style.bottom = ''
+    const rect = this.panel.getBoundingClientRect()
+    const height = this.doc.defaultView?.innerHeight ?? 0
+    const lift = rect.height > 0 ? liftOver(this.doc, rect) : 0
+    if (lift > height * MAX_LIFT) {
+      style.top = `${EDGE}px`
+      style.bottom = 'auto'
+    } else if (lift > 0) {
+      style.bottom = `${lift}px`
+    }
   }
 
   private clearNotice() {
