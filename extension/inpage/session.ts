@@ -94,6 +94,7 @@ const CHANGED: Notice = { text: 'This page changed', action: 'openTab' }
 const END: Notice = { text: 'End of the page', action: 'readOn' }
 const NOTHING_NEW: Notice = { text: "That's the end of this page" }
 const ARMED: Notice = { text: 'Press Space or Play to start' }
+const ARMED_NO_SPACE: Notice = { text: 'Press Play to start' }
 const FINGERPRINT_WORDS = 50
 
 const NO_BAR: BarView = {
@@ -144,6 +145,7 @@ export class InPageSession {
   private disposed = false
   private isPlaying = false
   private armed = false
+  private spaceReaches = true
   private finished = false
   private index = 0
   private from = 0
@@ -366,6 +368,13 @@ export class InPageSession {
     return this.bar.closeSettings()
   }
 
+  setSpaceReaches(reaches: boolean): void {
+    this.spaceReaches = reaches
+    if (this.notice !== ARMED && this.notice !== ARMED_NO_SPACE) return
+    this.notice = reaches ? ARMED : ARMED_NO_SPACE
+    this.render()
+  }
+
   /** Moves to a clicked word, and starts reading there when the press is still waiting to start. */
   pick(i: number): void {
     const start = this.armed
@@ -526,7 +535,7 @@ export class InPageSession {
   /** Highlights where reading will start and waits for Space, Play or a click on a word. */
   private arm() {
     this.armed = true
-    this.notice = ARMED
+    this.notice = this.spaceReaches ? ARMED : ARMED_NO_SPACE
     this.run(1)
   }
 

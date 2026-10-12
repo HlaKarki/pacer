@@ -11,6 +11,7 @@ const $ = <T extends Element = HTMLElement>(selector: string) => document.queryS
 let calls: string[]
 let session: KeyTarget & { playing: boolean; bySentence: boolean; settingsOpen: boolean }
 let pageHeard: string[]
+let spaceHeard: boolean[]
 let detach: () => void
 
 const record = (name: string) => () => void calls.push(name)
@@ -46,6 +47,7 @@ beforeEach(() => {
     <div id="host"></div></article>`
   calls = []
   pageHeard = []
+  spaceHeard = []
   session = {
     playing: true,
     bySentence: false,
@@ -56,6 +58,7 @@ beforeEach(() => {
       calls.push('closeSettings')
       return true
     },
+    setSpaceReaches: (reaches) => void spaceHeard.push(reaches),
     toggle: record('toggle'),
     pause: record('pause'),
     stop: (reason) => void calls.push(`stop:${reason}`),
@@ -89,9 +92,9 @@ describe('isReadingFocus', () => {
   test('leaves fields, editors and widgets alone', () => {
     document.body.insertAdjacentHTML(
       'beforeend',
-      '<textarea id="ta"></textarea><select id="sel"></select><div id="tb" role="textbox"></div><a id="lnk" href="/x">x</a><video id="vid"></video><div id="sl" role="slider"></div><span id="t0" tabindex="0">x</span>',
+      '<textarea id="ta"></textarea><select id="sel"></select><div id="tb" role="textbox"></div><a id="rl" href="/x" role="button">x</a><video id="vid"></video><div id="sl" role="slider"></div><span id="t0" tabindex="0">x</span>',
     )
-    for (const id of ['field', 'ta', 'sel', 'editor', 'inside', 'tb', 'lnk', 'rb', 'tab', 'sum', 'vid', 'sl', 't0']) {
+    for (const id of ['field', 'ta', 'sel', 'editor', 'inside', 'tb', 'rl', 'rb', 'tab', 'sum', 'vid', 'sl', 't0']) {
       expect([id, isReadingFocus($(`#${id}`))]).toEqual([id, false])
     }
   })
@@ -103,11 +106,15 @@ describe('isReadingFocus', () => {
     expect(isReadingFocus($('#rb'), true)).toBe(false)
   })
 
-  test('counts a link as reading when a click focused it, since Space on a link only scrolls', () => {
-    document.body.insertAdjacentHTML('beforeend', '<a id="lnk" href="#s2">Section two</a><a id="rlnk" href="#" role="button">Menu</a>')
+  test('counts a plain link as reading however it got focus, since Space and the arrows only scroll from it', () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<a id="lnk" href="#s2">Section two</a><a id="rlnk" href="#" role="button">Menu</a><div role="menubar"><a id="mlnk" href="/a">A</a></div>',
+    )
     expect(isReadingFocus($('#lnk'), true)).toBe(true)
-    expect(isReadingFocus($('#lnk'))).toBe(false)
+    expect(isReadingFocus($('#lnk'))).toBe(true)
     expect(isReadingFocus($('#rlnk'), true)).toBe(false)
+    expect(isReadingFocus($('#mlnk'))).toBe(false)
     expect(isReadingFocus($('#sum'), true)).toBe(false)
   })
 })
@@ -160,14 +167,27 @@ describe('attachKeys', () => {
     expect(pageHeard).toEqual(['keydown:ArrowDown', 'keyup:ArrowDown'])
   })
 
-  test('takes the keys after a click on a link, and leaves them to it after a Tab', () => {
-    document.body.insertAdjacentHTML('beforeend', '<a id="lnk" href="#s2">Section two</a>')
+  test('takes the keys on a link after a click or a Tab, and leaves the arrows to a menu bar of links', () => {
+    document.body.insertAdjacentHTML('beforeend', '<a id="lnk" href="#s2">Section two</a><div role="menubar"><a id="mlnk" href="/a">A</a></div>')
     $('#lnk').dispatchEvent(new window.FocusEvent('focusin', { bubbles: true, composed: true }) as unknown as Event)
     press($('#lnk'), ' ')
     $('#lnk').focus()
     press($('#lnk'), ' ')
-    expect(calls).toEqual(['toggle'])
-    expect(pageHeard).toEqual(['keydown: ', 'keyup: '])
+    $('#mlnk').focus()
+    press($('#mlnk'), 'ArrowRight')
+    expect(calls).toEqual(['toggle', 'toggle'])
+    expect(pageHeard).toEqual(['keydown:ArrowRight', 'keyup:ArrowRight'])
+  })
+
+  test('tells the session whether Space reaches Pacer each time focus moves', async () => {
+    document.body.insertAdjacentHTML('beforeend', '<a id="lnk" href="#s2">Section two</a><pacer-bar id="bar" tabindex="0"></pacer-bar>')
+    $('#field').focus()
+    $('#lnk').focus()
+    $('#rb').focus()
+    $('#rb').blur()
+    await Promise.resolve()
+    $('#bar').focus()
+    expect(spaceHeard).toEqual([true, false, true, false, true, false])
   })
 
   test('moves back by sentence in sentence chunks', () => {

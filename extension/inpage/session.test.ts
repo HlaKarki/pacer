@@ -170,6 +170,7 @@ async function begin(options: SessionOptions = {}) {
 
 const PLAY: SessionOptions = { autoplay: true }
 const ARMED = { text: 'Press Space or Play to start' }
+const NO_SPACE = { text: 'Press Play to start' }
 
 const SR_ONLY = ' <span style="overflow: hidden; width: 1px; height: 1px">Skip to content.</span>'
 
@@ -257,6 +258,23 @@ describe('InPageSession', () => {
     expect([nowText(), nowPara(), click.session.playing]).toEqual(['Paragraph', 7, true])
     expect(lastState(click.bar).notice).toBeNull()
     click.session.dispose()
+  })
+
+  test('offers only Play in the armed hint while focus sits where Space does not reach Pacer', async () => {
+    page('<input id="q">')
+    const field = document.getElementById('q')!
+    field.focus()
+    const { session, bar } = await begin()
+    expect(lastState(bar).notice).toEqual(NO_SPACE)
+    field.blur()
+    await flush()
+    expect(lastState(bar).notice).toEqual(ARMED)
+    session.setSpaceReaches(false)
+    expect(lastState(bar).notice).toEqual(NO_SPACE)
+    session.play()
+    session.pause()
+    session.setSpaceReaches(true)
+    expect([session.playing, lastState(bar).notice]).toEqual([false, null])
   })
 
   test('takes the paragraph in view when a contents link scrolls an armed start off screen', async () => {

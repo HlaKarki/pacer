@@ -8,6 +8,7 @@ const ROLES = 'button link tab slider listbox menu menuitem tree grid combobox r
 const CONTROLS = ['a[href]', 'button', 'summary', 'video', 'audio', ...ROLES.split(' ').map((role) => `[role=${role}]`)].join(', ')
 const FOCUSABLE = '[tabindex]:not([tabindex="-1"])'
 const PLAIN_LINK = 'a[href]:not([role])'
+const ARROW_WIDGET = '[role=menubar], [role=toolbar], [role=tablist], [role=tree], [role=treegrid], [role=grid], [role=radiogroup]'
 const CLICKABLE = `${CONTROLS}, ${EDITABLE}, label`
 const OVERLAY = 'dialog[open], [aria-modal="true"], :popover-open, [role=dialog], [role=alertdialog], [role=menu], [role=listbox]'
 const MODAL = 'dialog:modal, [aria-modal="true"]'
@@ -20,6 +21,8 @@ export interface KeyTarget {
   readonly settingsOpen: boolean
   /** False when the bar's settings panel was already closed. */
   closeSettings(): boolean
+  /** Told each time focus moves whether Space would now reach Pacer. */
+  setSpaceReaches(reaches: boolean): void
   toggle(): void
   pause(): void
   stop(reason: StopReason): unknown
@@ -44,14 +47,14 @@ const isElement = (node: unknown): node is Element => (node as Node | null)?.nod
 
 const editable = (el: Element) => el.matches(EDITABLE) || (el as HTMLElement).isContentEditable === true
 
-/** True when focus is on the page or its text, so Space and the arrows belong to Pacer there. A box or a plain link a click focused counts as text. */
+/** True when focus is on the page or its text, so Space and the arrows belong to Pacer there. A plain link and a box a click focused count as text. */
 export function isReadingFocus(el: Element | null, clicked = false): boolean {
   if (!el) return true
   const doc = el.ownerDocument
   if (el === doc.body || el === doc.documentElement) return true
   if (editable(el)) return false
-  // Space on a link only scrolls the page, so a link a click left focused, like a contents link, leaves the keys to Pacer.
-  if (el.matches(CONTROLS)) return clicked && el.matches(PLAIN_LINK)
+  // Space and the arrows only scroll the page from a plain link, unless a widget around it moves between its links with the arrows.
+  if (el.matches(CONTROLS)) return el.matches(PLAIN_LINK) && !el.closest(ARROW_WIDGET)
   // GitHub makes the whole README focusable, so only a box the keyboard focused keeps the keys from Pacer.
   return clicked || !el.matches(FOCUSABLE)
 }
@@ -87,10 +90,22 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
   const handled = new Set<string>()
   const byClick = (el: Element | null) => (el && !el.matches(':focus-visible') ? el : null)
   let clicked = byClick(doc.activeElement)
+  let spaceReached: boolean | null = null
+
+  const reaches = (focus: Element | null) => isReadingFocus(focus, focus === clicked) && !focus?.closest(OVERLAY) && !shown(doc, MODAL)
+
+  // Space typed on Pacer's own bar presses the focused bar button, so it only reaches Pacer's keys from the page.
+  const syncSpace = () => {
+    const active = doc.activeElement
+    const now = !(active && OWN_HOST.test(active.localName)) && reaches(focusWithin(active))
+    if (now === spaceReached) return
+    spaceReached = now
+    session.setSpaceReaches(now)
+  }
 
   const actionFor = (e: KeyboardEvent): (() => void) | null => {
     const focus = deepFocus(e, doc)
-    if (!isReadingFocus(focus, focus === clicked) || focus?.closest(OVERLAY) || shown(doc, MODAL)) return null
+    if (!reaches(focus)) return null
     if (e.key === 'Escape') {
       if (session.settingsOpen) return () => session.closeSettings()
       if (shown(doc, OVERLAY) || inOpenControl(focus)) return null
@@ -137,7 +152,10 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
   // Chrome marks any focus as focus-visible once a key goes down, so tell a click's focus from a Tab's as it lands.
   const onFocus = (e: FocusEvent) => {
     clicked = byClick(isElement(e.target) ? e.target : null)
+    syncSpace()
   }
+  // Focus leaving for the next element lands on it a moment later, so look once it has settled.
+  const onBlur = () => queueMicrotask(syncSpace)
 
   // The Esc that stops Pacer detaches these listeners before its keyup arrives, so that keyup still needs catching.
   const lingerUntilKeysUp = () => {
@@ -156,10 +174,13 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
   win.addEventListener('keydown', onKeyDown, true)
   win.addEventListener('keyup', onKeyUp, true)
   win.addEventListener('focusin', onFocus, true)
+  win.addEventListener('focusout', onBlur, true)
+  syncSpace()
   return () => {
     win.removeEventListener('keydown', onKeyDown, true)
     win.removeEventListener('keyup', onKeyUp, true)
     win.removeEventListener('focusin', onFocus, true)
+    win.removeEventListener('focusout', onBlur, true)
     if (handled.size) lingerUntilKeysUp()
   }
 }
