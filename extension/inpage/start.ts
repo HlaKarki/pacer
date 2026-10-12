@@ -1,9 +1,10 @@
-import { sentenceStart, type Doc } from '../../src/lib/text'
+import { findText, sentenceStart, type Doc } from '../../src/lib/text'
 import { HEADER_STRIP } from '../article'
 import { PAST_END } from '../store'
 import { isScroller, type WordMap } from './map'
 
 const LOOK_AHEAD = 5
+const SELECTION_NODES = 200
 const MIN_SHOWN = 0.5
 
 export interface ViewportStart {
@@ -68,4 +69,24 @@ export function viewportStart(doc: Doc, map: WordMap, win: Window): ViewportStar
     return { from, at: firstShown(start, end) }
   }
   return null
+}
+
+/** The first selected word on the page: where the live selection starts, else where its text appears in the article, else -1. */
+export function selectedWord(page: Document, map: WordMap, doc: Doc, text: string): number {
+  const selection = page.getSelection()
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+  if (range && !range.collapsed) {
+    // A selection can start in a heading Pacer skips or in the space between blocks, so walk on to the first word it maps.
+    const { startContainer, startOffset } = range
+    const from = startContainer.nodeType === Node.TEXT_NODE ? startContainer : (startContainer.childNodes[startOffset] ?? startContainer)
+    const walker = page.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT)
+    walker.currentNode = from
+    let node: Node | null = from.nodeType === Node.TEXT_NODE ? from : walker.nextNode()
+    for (let seen = 0; node && seen < SELECTION_NODES && range.intersectsNode(node); seen++) {
+      const i = map.wordAt(node, node === startContainer ? startOffset : 0)
+      if (i >= 0) return i
+      node = walker.nextNode()
+    }
+  }
+  return findText(doc, text)
 }

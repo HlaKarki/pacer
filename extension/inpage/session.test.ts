@@ -6,6 +6,7 @@ import { InPageSession, type BarActions, type BarState, type LineBox, type Sessi
 
 const window = new Window({ url: 'https://example.com/essay#intro' })
 globalThis.Node = window.Node as unknown as typeof Node
+globalThis.NodeFilter = window.NodeFilter as unknown as typeof NodeFilter
 const document = window.document as unknown as Document
 const win = window as unknown as Window
 const RangeProto = window.Range.prototype as unknown as Range
@@ -180,6 +181,14 @@ const nowPara = () => paraOf(nowRange()!.startContainer)
 const readText = () => [...(registry.get('pacer-read-light') ?? [])].map(String).join('|')
 const lastState = (bar: { states: BarState[] }) => bar.states.at(-1)!
 const docOf = (session: InPageSession) => parse(session.article!.text)
+function selectWord(n: number, word: string) {
+  const text = document.querySelector(`[data-para="${n}"]`)!.firstChild as Text
+  const range = document.createRange()
+  range.setStart(text, text.data.indexOf(word))
+  range.setEnd(text, text.data.indexOf(word) + word.length)
+  document.getSelection()!.removeAllRanges()
+  document.getSelection()!.addRange(range)
+}
 
 describe('InPageSession', () => {
   test('arms at the paragraph in view without scrolling, and the first Play glides its line to the band', async () => {
@@ -275,6 +284,35 @@ describe('InPageSession', () => {
     session.pause()
     session.setSpaceReaches(true)
     expect([session.playing, lastState(bar).notice]).toEqual([false, null])
+  })
+
+  test('starts at the word picked with Read from here, clearing the selection and passing over a saved place', async () => {
+    page()
+    root.scrollTop = 1000
+    const first = await begin()
+    const doc = docOf(first.session)
+    first.session.dispose()
+    data[KEY] = { index: doc.paragraphs[3].start, words: doc.words.length, from: 7 }
+    selectWord(7, 'number')
+    const { session, bar } = await begin({ selection: 'number' })
+    expect([nowText(), nowPara(), session.playing, lastState(bar).notice]).toEqual(['number,', 7, false, ARMED])
+    expect(document.getSelection()!.rangeCount).toBe(0)
+  })
+
+  test('moves a running reading to the picked word and keeps it paused or playing', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session } = await begin()
+    selectWord(8, 'keeps')
+    session.moveToSelection('keeps')
+    expect([nowText(), nowPara(), session.playing]).toEqual(['keeps', 8, false])
+    session.play()
+    selectWord(9, 'number')
+    session.moveToSelection('number')
+    expect([nowText(), nowPara(), session.playing]).toEqual(['number,', 9, true])
+    expect(document.getSelection()!.rangeCount).toBe(0)
+    session.moveToSelection('not on this page')
+    expect([nowText(), nowPara()]).toEqual(['number,', 9])
   })
 
   test('takes the paragraph in view when a contents link scrolls an armed start off screen', async () => {

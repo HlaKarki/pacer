@@ -3,10 +3,11 @@ import { Window } from 'happy-dom'
 import { parse, sentenceStart } from '../../src/lib/text'
 import { PAST_END, startFrom } from '../store'
 import { WordMap } from './map'
-import { viewportStart } from './start'
+import { selectedWord, viewportStart } from './start'
 
 const window = new Window()
 globalThis.Node = window.Node as unknown as typeof Node
+globalThis.NodeFilter = window.NodeFilter as unknown as typeof NodeFilter
 const document = window.document as unknown as Document
 const RangeProto = window.Range.prototype as unknown as Range
 const win = window as unknown as Window
@@ -137,5 +138,45 @@ describe('viewportStart', () => {
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
     Object.defineProperty(scroller, 'scrollTop', { value: 1000 })
     expect(viewportStart(doc, map, win)?.from).toBe(6)
+  })
+})
+
+describe('selectedWord', () => {
+  const select = (startNode: Node, startOffset: number, endNode: Node, endOffset: number) => {
+    const range = document.createRange()
+    range.setStart(startNode, startOffset)
+    range.setEnd(endNode, endOffset)
+    document.getSelection()!.removeAllRanges()
+    document.getSelection()!.addRange(range)
+  }
+  const twice = () =>
+    setup('The same words here.\n\nThe same words here.', '<article><p data-top="0">The same words here.</p><p data-top="200">The same words here.</p></article>')
+
+  afterEach(() => document.getSelection()?.removeAllRanges())
+
+  test('starts where the live selection starts, even when the same text comes earlier', () => {
+    const { doc, map } = twice()
+    const second = document.querySelectorAll('p')[1].firstChild!
+    select(second, 4, second, 14)
+    expect(selectedWord(document, map, doc, 'same words')).toBe(5)
+  })
+
+  test('starts at the block a selection begins on when it starts between blocks', () => {
+    const { doc, map } = twice()
+    const article = document.querySelector('article')!
+    select(article, 1, article, 2)
+    expect(selectedWord(document, map, doc, 'The same words here.')).toBe(4)
+  })
+
+  test('walks past a heading Pacer skips to the first word it maps', () => {
+    const { doc, map } = setup(para(1), `<h2 data-top="0">Share this</h2><p data-top="60">${para(1)}</p>`)
+    select(document.querySelector('h2')!.firstChild!, 0, document.querySelector('p')!.firstChild!, 9)
+    expect(selectedWord(document, map, doc, 'Share this Paragraph')).toBe(0)
+  })
+
+  test('finds the selected text in the article when the page has no live selection', () => {
+    const { doc, map } = twice()
+    expect(selectedWord(document, map, doc, 'words here')).toBe(2)
+    expect(selectedWord(document, map, doc, 'not on this page')).toBe(-1)
   })
 })

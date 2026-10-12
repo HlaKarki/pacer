@@ -5,6 +5,8 @@ import { InPageSession, type SessionOptions, type StopReason, type ToggleResult 
 
 export interface InPage {
   toggle(): Promise<ToggleResult>
+  /** Starts at the selected text, or where a press would when text is null, and never stops a running reading. */
+  readFrom(text: string | null): Promise<ToggleResult>
 }
 
 export interface OpenTabMessage {
@@ -18,6 +20,7 @@ export interface Session {
   readonly fingerprint: string | null
   start(): Promise<ToggleResult>
   stop(reason: StopReason): Promise<{ index: number; from: number }>
+  moveToSelection(text: string): void
 }
 
 const UNREADABLE = 'Pacer could not read this page.'
@@ -59,12 +62,13 @@ export function createInPage(
     if (result.kind === 'fallback' && !(await askForTab(result.article))) Toast.show(NO_TAB, win.document)
   }
 
-  function begin(after?: string, autoplay = false): Promise<ToggleResult> {
+  function begin(after?: string, autoplay = false, selection: string | null = null): Promise<ToggleResult> {
     removeForeign(win.document)
     const next = makeSession({
       win,
       after,
       autoplay,
+      selection,
       openTab: () => void openTab(next),
       readOn: () => void readOn(next),
       ended: () => {
@@ -75,13 +79,13 @@ export function createInPage(
     return next.start()
   }
 
-  async function start(previous?: Session): Promise<ToggleResult> {
+  async function start(previous?: Session, selection: string | null = null): Promise<ToggleResult> {
     starting = true
     try {
       // A stopped session has no fingerprint, so take it before the stop.
       const after = previous?.fingerprint ?? undefined
       await previous?.stop('close')
-      return await begin(after, previous !== undefined)
+      return await begin(after, previous !== undefined, selection)
     } catch (error) {
       session = null
       if (!(error instanceof ImportError)) console.error(error)
@@ -107,6 +111,16 @@ export function createInPage(
         return { kind: 'stopped' }
       }
       return start()
+    },
+
+    async readFrom(text) {
+      if (starting) return { kind: 'busy' }
+      Toast.dismiss()
+      if (session) {
+        if (text !== null) session.moveToSelection(text)
+        return { kind: 'started' }
+      }
+      return start(undefined, text)
     },
   }
 }

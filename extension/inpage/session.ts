@@ -13,7 +13,7 @@ import { attachClicks, attachKeys } from './keys'
 import { extensionGone, watchNavigation, watchPage } from './lifecycle'
 import { MIN_COVERAGE, WordMap } from './map'
 import { Marks, type Tone, type ToneRun } from './marks'
-import { viewportStart, type ViewportStart } from './start'
+import { selectedWord, viewportStart, type ViewportStart } from './start'
 
 export type ToggleResult =
   | { kind: 'started' }
@@ -81,6 +81,8 @@ export interface SessionOptions {
   after?: string
   /** Plays at once instead of waiting for Space, Play or a click on a word, as Read on does. */
   autoplay?: boolean
+  /** Text picked with "Read from here with Pacer", so reading starts at it instead of the paragraph in view. */
+  selection?: string | null
   /** Runs once when the session goes, however it went, so its owner can let it go. */
   ended?: () => void
 }
@@ -126,9 +128,10 @@ interface Run {
 export class InPageSession {
   readonly key: string
   private readonly win: Window
-  private readonly options: Required<Omit<SessionOptions, 'win' | 'after' | 'autoplay'>>
+  private readonly options: Required<Omit<SessionOptions, 'win' | 'after' | 'autoplay' | 'selection'>>
   private readonly after: string | null
   private readonly autoplay: boolean
+  private readonly selection: string | null
   private bar: BarView = NO_BAR
   private store: ExtensionStore | null = null
   private source: Article | null = null
@@ -171,6 +174,7 @@ export class InPageSession {
     }
     this.after = options.after ?? null
     this.autoplay = options.autoplay ?? false
+    this.selection = options.selection ?? null
   }
 
   get playing(): boolean {
@@ -228,13 +232,18 @@ export class InPageSession {
     if (this.gone()) return this.stopped()
 
     const map = WordMap.build(doc, page.body ?? page.documentElement)
-    const start = map.coverage < MIN_COVERAGE ? null : viewportStart(doc, map, win)
+    const mapped = map.coverage >= MIN_COVERAGE
+    const picked = mapped && this.selection !== null ? selectedWord(page, map, doc, this.selection) : -1
+    const start = picked >= 0 ? { from: doc.words[picked].para, at: picked } : mapped ? viewportStart(doc, map, win) : null
     if (!start) {
       this.dispose()
       return { kind: 'fallback', article: { ...article, startParagraph: this.fallbackParagraph(doc) } }
     }
-    const place = await store.place(this.key)
+    // The reader picked where to start, so a saved place must not override it.
+    const place = picked >= 0 ? undefined : await store.place(this.key)
     if (this.gone()) return this.stopped()
+    // The selection would hide the highlight, so clear it.
+    if (picked >= 0) page.getSelection()?.removeAllRanges()
 
     this.source = article
     this.doc = doc
@@ -373,6 +382,15 @@ export class InPageSession {
     if (this.notice !== ARMED && this.notice !== ARMED_NO_SPACE) return
     this.notice = reaches ? ARMED : ARMED_NO_SPACE
     this.render()
+  }
+
+  moveToSelection(text: string): void {
+    if (!this.ready) return
+    const page = this.win.document
+    const i = selectedWord(page, this.map, this.doc, text)
+    if (i < 0) return
+    page.getSelection()?.removeAllRanges()
+    this.jump(i)
   }
 
   /** Moves to a clicked word, and starts reading there when the press is still waiting to start. */

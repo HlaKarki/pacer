@@ -13,6 +13,7 @@ const win = window as unknown as Window
 interface Fake extends Session {
   options: SessionOptions
   stops: StopReason[]
+  moves: string[]
   finish(result: ToggleResult | Error): void
 }
 
@@ -28,6 +29,7 @@ function fakeSession(options: SessionOptions): Fake {
   const fake: Fake = {
     options,
     stops: [],
+    moves: [],
     article: ARTICLE,
     fingerprint: `fingerprint ${made.length}`,
     start: () =>
@@ -40,6 +42,7 @@ function fakeSession(options: SessionOptions): Fake {
       return { index: 40, from: 3 }
     },
     finish: (result) => settle(result),
+    moveToSelection: (text) => void fake.moves.push(text),
   }
   made.push(fake)
   return fake
@@ -94,6 +97,29 @@ describe('createInPage', () => {
     expect(made.length).toBe(2)
     made[1].finish({ kind: 'started' })
     expect(await again).toEqual({ kind: 'started' })
+  })
+
+  test('starts at the selection from the right-click menu, and moves a running reading there instead of stopping it', async () => {
+    const page = createInPage(win, fakeSession)
+    const picked = page.readFrom('the words')
+    await tick()
+    expect([made.length, made[0].options.selection, made[0].options.autoplay]).toEqual([1, 'the words', false])
+    made[0].finish({ kind: 'started' })
+    expect(await picked).toEqual({ kind: 'started' })
+    expect(await page.readFrom('more words')).toEqual({ kind: 'started' })
+    expect(await page.readFrom(null)).toEqual({ kind: 'started' })
+    expect([made.length, made[0].moves, made[0].stops]).toEqual([1, ['more words'], []])
+  })
+
+  test('starts where a press would from the menu with nothing selected', async () => {
+    const page = createInPage(win, fakeSession)
+    const pressed = page.readFrom(null)
+    await tick()
+    expect(made[0].options.selection).toBeNull()
+    made[0].finish({ kind: 'started' })
+    expect(await pressed).toEqual({ kind: 'started' })
+    expect(await page.readFrom(null)).toEqual({ kind: 'started' })
+    expect(made.length).toBe(1)
   })
 
   test('answers busy while a start is under way', async () => {
