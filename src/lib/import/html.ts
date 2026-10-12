@@ -14,6 +14,13 @@ export interface Block {
   level: number
 }
 
+/** A block with the raw text it came from and the text node behind each stretch of that text. */
+export interface SourcedBlock extends Block {
+  raw: string
+  /** Each node's text starts at `at` in `raw`, in document order. */
+  pieces: { node: Text; at: number }[]
+}
+
 export interface HtmlOptions {
   /** Drops an element and everything inside it. */
   skip?: (el: Element) => boolean
@@ -42,17 +49,33 @@ function skipped(el: Element, options: HtmlOptions): boolean {
 
 const isBlock = (el: Element, options: HtmlOptions) => BLOCK.has(nameOf(el)) || (options.block?.(el) ?? false)
 
-function textOf(node: Node, options: HtmlOptions): string {
+interface Sourced {
+  raw: string
+  pieces: SourcedBlock['pieces']
+}
+
+const sourced = (): Sourced => ({ raw: '', pieces: [] })
+
+function textInto(node: Node, options: HtmlOptions, acc: Sourced) {
   if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
-    return (node as CharacterData).data
+    acc.pieces.push({ node: node as Text, at: acc.raw.length })
+    acc.raw += (node as CharacterData).data
+    return
   }
-  if (node.nodeType !== Node.ELEMENT_NODE) return ''
+  if (node.nodeType !== Node.ELEMENT_NODE) return
   const el = node as Element
-  if (skipped(el, options)) return ''
-  if (nameOf(el) === 'br') return ' '
-  let out = ''
-  for (const child of el.childNodes) out += textOf(child, options)
-  return out
+  if (skipped(el, options)) return
+  if (nameOf(el) === 'br') {
+    acc.raw += ' '
+    return
+  }
+  for (const child of el.childNodes) textInto(child, options, acc)
+}
+
+function textOf(el: Element, options: HtmlOptions): Sourced {
+  const acc = sourced()
+  textInto(el, options, acc)
+  return acc
 }
 
 const internalLinks = (el: Element) =>
@@ -89,41 +112,45 @@ export function droppedFrom(el: Element, options: HtmlOptions = {}): boolean {
   return false
 }
 
-function collect(el: Element, out: Block[], options: HtmlOptions) {
+function push(out: SourcedBlock[], { raw, pieces }: Sourced, level: number) {
+  const text = clean(raw)
+  if (text && !(level && CONTENTS_HEADING.test(text))) out.push({ text, level, raw, pieces })
+}
+
+function collect(el: Element, out: SourcedBlock[], options: HtmlOptions) {
   if (dropped(el, options)) return
   const heading = /^h([1-6])$/.exec(nameOf(el))
   if (heading) {
-    const text = clean(textOf(el, options))
-    if (text && !CONTENTS_HEADING.test(text)) out.push({ text, level: Number(heading[1]) })
+    push(out, textOf(el, options), Number(heading[1]))
     return
   }
   const hasBlockChild = [...el.children].some((c) => isBlock(c, options) && !skipped(c, options))
   if (!hasBlockChild) {
-    const text = clean(textOf(el, options))
-    if (text) out.push({ text, level: 0 })
+    push(out, textOf(el, options), 0)
     return
   }
-  let inline = ''
-  const flush = () => {
-    const text = clean(inline)
-    if (text) out.push({ text, level: 0 })
-    inline = ''
-  }
+  let inline = sourced()
   for (const child of el.childNodes) {
     if (child.nodeType === Node.ELEMENT_NODE && isBlock(child as Element, options)) {
-      flush()
+      push(out, inline, 0)
+      inline = sourced()
       collect(child as Element, out, options)
     } else {
-      inline += textOf(child, options)
+      textInto(child, options, inline)
     }
   }
-  flush()
+  push(out, inline, 0)
+}
+
+/** The same blocks as blocksFromHtml, each with the text nodes it was read from, so a word can be found on the live page. */
+export function sourcedBlocksFromHtml(root: Element, options: HtmlOptions = {}): SourcedBlock[] {
+  const out: SourcedBlock[] = []
+  collect(root, out, options)
+  return out
 }
 
 export function blocksFromHtml(root: Element, options: HtmlOptions = {}): Block[] {
-  const out: Block[] = []
-  collect(root, out, options)
-  return out
+  return sourcedBlocksFromHtml(root, options).map(({ text, level }) => ({ text, level }))
 }
 
 /** One paragraph per block, so paragraph k of the parsed text is block k. */
