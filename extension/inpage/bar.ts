@@ -226,9 +226,10 @@ kbd { margin-right: 4px; padding: 1px 6px; font: inherit; font-size: 12px; font-
 @media (max-width: 480px) {
   .panel { gap: 2px; }
   .time, .chunk { display: none; }
-  .panel[data-notice] .wpm, .panel[data-action='openTab'] .open { display: none; }
+  .panel[data-action] .wpm, .panel[data-notice]:not([data-action='readOn']) .open { display: none; }
   .wpm-value { min-width: 3.4em; }
   .middle { padding-inline: 6px; }
+  .notice { font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .fill { transition: none; }
