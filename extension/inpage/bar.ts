@@ -68,7 +68,7 @@ const shortcuts = (bySentence: boolean): [string, string][] => [
   ['← →', bySentence ? 'Back or forward one sentence' : 'Back or forward one word'],
   ...(bySentence ? [] : [['⇧← ⇧→', 'Back or forward one sentence'] satisfies [string, string]]),
   ['↑ ↓', 'Faster or slower'],
-  ['Esc', 'Pause, then stop'],
+  ['Esc', 'Close settings, pause, then stop'],
 ]
 const TOAST_MS = 4000
 const EDGE = 16
@@ -387,6 +387,14 @@ export class Bar implements BarView {
     this.settings.append(this.chunkChoice.row, this.smartChoice.row, this.pausesChoice.row, this.autoStartChoice.row, this.shortcutList)
 
     panel.append(this.play, wpm, middle, this.chunk, this.settingsButton, openTab, close, this.settings)
+    // Keys typed with focus inside the bar never reach Pacer's page keys, so Esc closes the panel here too.
+    panel.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || this.settings.hidden) return
+      e.stopPropagation()
+      const inside = this.settings.contains(e.target as Node)
+      this.closeSettings()
+      if (inside) this.settingsButton.focus()
+    })
     root.append(panel)
     this.setPlaying(false)
     this.place()

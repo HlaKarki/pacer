@@ -227,6 +227,25 @@ describe('Bar', () => {
     expect(inBar('.settings').hidden).toBe(false)
   })
 
+  test('closes the panel on an Esc typed inside the bar, handing focus back to the sliders button', () => {
+    const bar = Bar.mount(actions, document)
+    bar.render(STATE)
+    const heard: string[] = []
+    const onPage = (e: Event) => void heard.push((e as KeyboardEvent).key)
+    document.addEventListener('keydown', onPage)
+    const escape = (target: Element) =>
+      target.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }) as unknown as Event)
+    button('Reading settings').click()
+    const inside = radio('Smart pacing', 'Off')
+    inside.focus()
+    escape(inside)
+    expect(inBar('.settings').hidden).toBe(true)
+    expect(roots[0].activeElement).toBe(button('Reading settings'))
+    escape(button('Reading settings'))
+    expect(heard).toEqual(['Escape'])
+    document.removeEventListener('keydown', onPage)
+  })
+
   test('lists the keys, with sentence steps on the plain arrows when the chunk is a sentence', () => {
     const bar = Bar.mount(actions, document)
     const keys = () => [...roots[0].querySelectorAll('.shortcuts > div')].map((row) => `${row.querySelector('dt')!.textContent} ${row.querySelector('dd')!.textContent}`)
@@ -236,10 +255,10 @@ describe('Bar', () => {
       '←→ Back or forward one word',
       '⇧←⇧→ Back or forward one sentence',
       '↑↓ Faster or slower',
-      'Esc Pause, then stop',
+      'Esc Close settings, pause, then stop',
     ])
     bar.render({ ...STATE, chunk: 'sentence' })
-    expect(keys()).toEqual(['Space Play or pause', '←→ Back or forward one sentence', '↑↓ Faster or slower', 'Esc Pause, then stop'])
+    expect(keys()).toEqual(['Space Play or pause', '←→ Back or forward one sentence', '↑↓ Faster or slower', 'Esc Close settings, pause, then stop'])
     expect(roots[0].querySelectorAll('.shortcuts kbd').length).toBe(6)
   })
 

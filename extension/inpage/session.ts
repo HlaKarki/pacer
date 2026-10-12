@@ -67,6 +67,8 @@ export interface BarView {
   render(state: BarState): void
   notice(text: string, action?: NoticeAction): void
   keepClear(line: LineBox | null): void
+  /** False when the settings panel was already closed. */
+  closeSettings(): boolean
   dispose(): void
 }
 
@@ -98,6 +100,7 @@ const NO_BAR: BarView = {
   render: () => undefined,
   notice: () => undefined,
   keepClear: () => undefined,
+  closeSettings: () => false,
   dispose: () => undefined,
 }
 const nothing = () => undefined
@@ -350,6 +353,10 @@ export class InPageSession {
   toggle(): void {
     if (this.isPlaying) this.pause()
     else this.play()
+  }
+
+  closeSettings(): boolean {
+    return this.bar.closeSettings()
   }
 
   /** Moves to a clicked word, and starts reading there when the press is still waiting to start. */

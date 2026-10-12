@@ -16,6 +16,8 @@ const ACTIVATING_MS = 300
 export interface KeyTarget {
   readonly playing: boolean
   readonly bySentence: boolean
+  /** False when the bar's settings panel was already closed. */
+  closeSettings(): boolean
   toggle(): void
   pause(): void
   stop(reason: StopReason): unknown
@@ -86,7 +88,11 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
     if (!isReadingFocus(focus, focus === clicked) || focus?.closest(OVERLAY) || shown(doc, MODAL)) return null
     if (e.key === 'Escape') {
       if (shown(doc, OVERLAY) || inOpenControl(focus)) return null
-      return () => (session.playing ? session.pause() : void session.stop('esc'))
+      return () => {
+        if (session.closeSettings()) return
+        if (session.playing) session.pause()
+        else void session.stop('esc')
+      }
     }
     switch (e.key) {
       case ' ':

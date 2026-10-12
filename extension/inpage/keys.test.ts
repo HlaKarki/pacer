@@ -9,7 +9,7 @@ const win = window as unknown as Window
 const $ = <T extends Element = HTMLElement>(selector: string) => document.querySelector<T>(selector)!
 
 let calls: string[]
-let session: KeyTarget & { playing: boolean; bySentence: boolean }
+let session: KeyTarget & { playing: boolean; bySentence: boolean; settingsOpen: boolean }
 let pageHeard: string[]
 let detach: () => void
 
@@ -49,6 +49,13 @@ beforeEach(() => {
   session = {
     playing: true,
     bySentence: false,
+    settingsOpen: false,
+    closeSettings: () => {
+      if (!session.settingsOpen) return false
+      session.settingsOpen = false
+      calls.push('closeSettings')
+      return true
+    },
     toggle: record('toggle'),
     pause: record('pause'),
     stop: (reason) => void calls.push(`stop:${reason}`),
@@ -189,6 +196,14 @@ describe('attachKeys', () => {
     session.playing = false
     press(document.body, 'Escape')
     expect(calls).toEqual(['pause', 'stop:esc'])
+    expect(pageHeard).toEqual([])
+  })
+
+  test('Esc closes the settings panel before it pauses', () => {
+    session.settingsOpen = true
+    press(document.body, 'Escape')
+    press(document.body, 'Escape')
+    expect(calls).toEqual(['closeSettings', 'pause'])
     expect(pageHeard).toEqual([])
   })
 

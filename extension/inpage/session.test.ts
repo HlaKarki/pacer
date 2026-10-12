@@ -124,13 +124,25 @@ const advance = async (ms: number) => {
 }
 
 function fakeBar() {
-  const bar = { states: [] as BarState[], notices: [] as string[], lines: [] as (LineBox | null)[], disposed: false, actions: null as BarActions | null }
+  const bar = {
+    states: [] as BarState[],
+    notices: [] as string[],
+    lines: [] as (LineBox | null)[],
+    disposed: false,
+    settingsOpen: false,
+    actions: null as BarActions | null,
+  }
   const mountBar = (actions: BarActions) => {
     bar.actions = actions
     return {
       render: (state: BarState) => void bar.states.push(state),
       notice: (text: string) => void bar.notices.push(text),
       keepClear: (line: LineBox | null) => void bar.lines.push(line),
+      closeSettings: () => {
+        const open = bar.settingsOpen
+        bar.settingsOpen = false
+        return open
+      },
       dispose: () => void (bar.disposed = true),
     }
   }
@@ -724,6 +736,20 @@ describe('InPageSession', () => {
     expect(scrolls).toBe(1)
     session.dispose()
     Reflect.deleteProperty(root, 'scrollTo')
+  })
+
+  test('closes the bar settings on Esc, then pauses, then stops', async () => {
+    page()
+    const { session, bar, ended } = await begin(PLAY)
+    const escape = () => document.body.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }) as unknown as Event)
+    bar.settingsOpen = true
+    escape()
+    expect([bar.settingsOpen, session.playing]).toEqual([false, true])
+    escape()
+    expect(session.playing).toBe(false)
+    escape()
+    await flush()
+    expect(ended()).toBe(1)
   })
 
   test('takes the reading keys and clicks only while it reads', async () => {
