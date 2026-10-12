@@ -168,6 +168,10 @@ export class InPageSession {
     return this.ready ? this.map : null
   }
 
+  get mapStale(): boolean {
+    return this.ready && !this.map.isLive(this.index, this.index + 1)
+  }
+
   get bySentence(): boolean {
     return this.store?.getSettings().chunk === 'sentence'
   }
@@ -295,6 +299,7 @@ export class InPageSession {
     }
     if (this.userScrolled) {
       this.userScrolled = false
+      this.freshMap()
       const active = this.map.rangeOf(this.chunk.start, this.chunk.end)
       const start = active && inView(active) ? null : viewportStart(this.doc, this.map, this.win)
       if (start && start.from !== PAST_END) {
@@ -378,12 +383,18 @@ export class InPageSession {
     return this.map
   }
 
+  /** Maps the page again when it replaced the text the reading is on, since a stale map finds no paragraph in view. */
+  private freshMap() {
+    if (this.mapStale) this.rebuildMap()
+  }
+
   /** Saves the place against the paragraph now in view, so the next press from here resumes this word. */
   async stop(reason: StopReason): Promise<{ index: number; from: number }> {
     if (!this.ready) {
       this.dispose()
       return { index: this.index, from: this.from }
     }
+    this.freshMap()
     const from = viewportStart(this.doc, this.map, this.win)?.from ?? 0
     const index = this.index
     this.store!.setPlace(this.key, { index, words: this.doc.words.length, from })

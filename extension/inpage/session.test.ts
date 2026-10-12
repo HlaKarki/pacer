@@ -412,6 +412,34 @@ describe('InPageSession', () => {
     session.dispose()
   })
 
+  test('picks up at the paragraph in view when the page re-rendered while paused and the reader scrolled', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session } = await begin()
+    document.querySelector('[data-para="6"]')!.dispatchEvent(new window.WheelEvent('wheel', { bubbles: true, deltaY: 40 }) as unknown as Event)
+    const article = document.querySelector('article')!
+    article.replaceWith(article.cloneNode(true))
+    root.scrollTop = 1600
+    session.play()
+    expect([nowText(), nowPara()]).toEqual(['Paragraph', 9])
+    session.dispose()
+  })
+
+  test('saves the paragraph in view and resumes the same word when the page re-rendered while paused', async () => {
+    page()
+    root.scrollTop = 1000
+    const first = await begin()
+    await advance(1500)
+    first.session.pause()
+    const word = [nowText(), nowRange()!.startOffset]
+    const article = document.querySelector('article')!
+    article.replaceWith(article.cloneNode(true))
+    expect((await first.session.stop('esc')).from).toBe(5)
+    const second = await begin()
+    expect([nowText(), nowRange()!.startOffset, nowPara()]).toEqual([...word, 6])
+    second.session.dispose()
+  })
+
   test('carries on from the same word when the line is still on screen after a wheel', async () => {
     page()
     root.scrollTop = 1000

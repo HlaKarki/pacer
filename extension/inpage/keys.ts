@@ -31,6 +31,8 @@ export interface KeyTarget {
 /** What a click on the page drives. */
 export interface ClickTarget {
   readonly wordMap: WordMap | null
+  /** True when the page replaced the text the reading is on. */
+  readonly mapStale: boolean
   jump(i: number): void
   rebuildMap(): WordMap | null
 }
@@ -163,7 +165,7 @@ export function attachClicks(doc: Document, session: ClickTarget): () => void {
     const { offsetNode, offset } = caret
     let i = map.wordAt(offsetNode, offset)
     // The page may have re-rendered this text, so one fresh map is worth trying when the click landed in it.
-    if (i < 0 && map.owns(offsetNode) && map.canRebuild()) {
+    if (i < 0 && (map.owns(offsetNode) || session.mapStale) && map.canRebuild()) {
       map = session.rebuildMap()
       i = map?.wordAt(offsetNode, offset) ?? -1
     }

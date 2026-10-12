@@ -252,6 +252,7 @@ describe('attachClicks', () => {
   let jumps: number[]
   let rebuilds: number
   let owns: boolean
+  let stale: boolean
   let words: Map<Node, number>
   let map: WordMap
   let stop: () => void
@@ -268,6 +269,7 @@ describe('attachClicks', () => {
     jumps = []
     rebuilds = 0
     owns = true
+    stale = false
     rebuilt = () => undefined
     rects = [{ left: 0, top: 0, right: 40, bottom: 20 }]
     const text = $('#text').firstChild!
@@ -283,6 +285,9 @@ describe('attachClicks', () => {
     const target: ClickTarget = {
       get wordMap() {
         return map
+      },
+      get mapStale() {
+        return stale
       },
       jump: (i) => void jumps.push(i),
       rebuildMap: () => {
@@ -372,6 +377,17 @@ describe('attachClicks', () => {
     pointerDown($('#text'))
     click($('#text'))
     expect(jumps).toEqual([3])
+  })
+
+  test('maps the page again when the page replaced the text the reading is on', () => {
+    owns = false
+    stale = true
+    const fresh = document.createTextNode(' new text')
+    $('#text').append(fresh)
+    caretOn(fresh)
+    rebuilt = () => words.set(fresh, 9)
+    click($('#text'))
+    expect([rebuilds, jumps]).toEqual([1, [9]])
   })
 
   test('does not map again for a click outside the article', () => {
