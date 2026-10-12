@@ -339,6 +339,8 @@ export class InPageSession {
         this.resetRead(start.at)
       }
     }
+    // The open panel can sit over the reading band on a short window, so it closes like a popover once reading starts.
+    this.bar.closeSettings()
     this.isPlaying = true
     this.armed = false
     this.notice = null

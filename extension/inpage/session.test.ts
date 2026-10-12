@@ -801,6 +801,20 @@ describe('InPageSession', () => {
     Reflect.deleteProperty(root, 'scrollTo')
   })
 
+  test('closes the bar settings when reading starts, so the panel never sits over the reading line', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, bar } = await begin()
+    bar.settingsOpen = true
+    document.body.dispatchEvent(new window.KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true }) as unknown as Event)
+    expect([session.playing, bar.settingsOpen]).toEqual([true, false])
+    session.pause()
+    bar.settingsOpen = true
+    bar.actions!.toggle()
+    expect([session.playing, bar.settingsOpen]).toEqual([true, false])
+    session.dispose()
+  })
+
   test('closes the bar settings on Esc, then pauses, then stops', async () => {
     page()
     const { session, bar, ended } = await begin(PLAY)
