@@ -76,6 +76,7 @@ const COVERED_SKIPS = 2
 const LOST: Notice = { text: 'Pacer lost its place', action: 'openTab' }
 const COVERED: Notice = { text: 'Something on the page covers the text', action: 'openTab' }
 const FAILED: Notice = { text: 'Pacer could not keep reading here', action: 'openTab' }
+const CHANGED: Notice = { text: 'This page changed', action: 'openTab' }
 const END: Notice = { text: 'End of the page', action: 'readOn' }
 const NOTHING_NEW: Notice = { text: "That's the end of this page" }
 const FINGERPRINT_WORDS = 50
@@ -362,6 +363,7 @@ export class InPageSession {
     if (!this.ready) return null
     this.map = this.map.rebuild()
     this.lineAt = -1
+    this.resetRead(this.readFrom)
     return this.map
   }
 
@@ -462,13 +464,16 @@ export class InPageSession {
       this.finish()
       return false
     }
+    if (!map.isLive(shown, shown + 1)) return this.remap(dir)
     const i = map.hasRects(shown) ? shown : this.withRects(shown, dir)
     if (i < 0) {
       this.pause(LOST)
       return false
     }
+    const chunk = chunkAt(doc, i, this.settings().chunk, (j) => (map.sameLine(i, j) ? 0 : 1))
+    if (!map.isLive(chunk.start, chunk.end)) return this.remap(dir)
     this.index = i
-    this.chunk = chunkAt(doc, i, this.settings().chunk, (j) => (map.sameLine(i, j) ? 0 : 1))
+    this.chunk = chunk
     const range = map.rangeOf(this.chunk.start, this.chunk.end)
     if (!range) {
       this.pause(LOST)
@@ -482,6 +487,23 @@ export class InPageSession {
     this.render()
     this.store!.setPlace(this.key, { index: i, words: doc.words.length, from: this.from })
     return true
+  }
+
+  /** The page replaced the text, so map it again once the throttle allows, keeping the index where it is until then. */
+  private remap(dir: 1 | -1): boolean {
+    if (!this.map.canRebuild()) {
+      this.timer = setTimeout(() => {
+        this.timer = null
+        this.run(dir)
+      }, this.map.nextRebuildIn())
+      return false
+    }
+    this.rebuildMap()
+    if (this.map.coverageFrom(this.index) < MIN_COVERAGE) {
+      this.pause(CHANGED)
+      return false
+    }
+    return this.show(dir)
   }
 
   private checkCovered = () => {

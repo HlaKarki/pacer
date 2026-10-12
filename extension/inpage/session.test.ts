@@ -271,6 +271,42 @@ describe('InPageSession', () => {
     session.dispose()
   })
 
+  test('holds its place while the page re-renders twice and carries on from the next word', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, bar } = await begin()
+    const rerender = async () => {
+      const map = session.wordMap
+      const end = nowRange()!.endOffset
+      const article = document.querySelector('article')!
+      article.replaceWith(article.cloneNode(true))
+      const at = Date.now()
+      for (let k = 0; k < 40 && session.wordMap === map; k++) await advance(50)
+      expect(session.wordMap).not.toBe(map)
+      expect(nowRange()!.startContainer.isConnected).toBe(true)
+      expect(nowPara()).toBe(6)
+      expect(nowRange()!.startOffset - end).toBeWithin(0, 2)
+      return Date.now() - at
+    }
+    await advance(300)
+    await rerender()
+    expect(await rerender()).toBeGreaterThanOrEqual(1000)
+    expect(session.playing).toBe(true)
+    expect(lastState(bar).notice).toBeNull()
+    session.dispose()
+  })
+
+  test('pauses with the tab on offer when the re-rendered page shows little of the article', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, bar } = await begin()
+    document.querySelector('article')!.innerHTML = `<p data-top="100">${para(1)}</p>`
+    await advance(1500)
+    expect(session.playing).toBe(false)
+    expect(lastState(bar).notice).toEqual({ text: 'This page changed', action: 'openTab' })
+    session.dispose()
+  })
+
   test('stops with the place saved against the paragraph in view and resumes that word next time', async () => {
     page()
     root.scrollTop = 1000
