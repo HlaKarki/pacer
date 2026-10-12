@@ -331,6 +331,7 @@ export class Bar implements BarView {
   private placedAt = -Infinity
   private line: LineBox | null = null
   private atTop = false
+  private escapeClosed = false
 
   private constructor(actions: BarActions, doc: Document) {
     this.doc = doc
@@ -390,11 +391,18 @@ export class Bar implements BarView {
     panel.append(this.play, wpm, middle, this.chunk, this.settingsButton, this.settings, openTab, close)
     // Keys typed with focus inside the bar never reach Pacer's page keys, so Esc closes the panel here too.
     panel.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape' || this.settings.hidden) return
+      if (e.key !== 'Escape') return
+      this.escapeClosed = !this.settings.hidden
+      if (!this.escapeClosed) return
       e.stopPropagation()
       const inside = this.settings.contains(e.target as Node)
       this.closeSettings()
       if (inside) this.settingsButton.focus()
+    })
+    panel.addEventListener('keyup', (e) => {
+      if (e.key !== 'Escape' || !this.escapeClosed) return
+      this.escapeClosed = false
+      e.stopPropagation()
     })
     root.append(panel)
     this.setPlaying(false)

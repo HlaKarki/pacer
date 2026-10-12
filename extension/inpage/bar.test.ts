@@ -257,6 +257,28 @@ describe('Bar', () => {
     document.removeEventListener('keydown', onPage)
   })
 
+  test('keeps the keyup of the Esc that closed the panel from the page', () => {
+    const bar = Bar.mount(actions, document)
+    bar.render(STATE)
+    const heard: string[] = []
+    const onPage = (e: Event) => void heard.push(`${e.type}:${(e as KeyboardEvent).key}`)
+    document.addEventListener('keydown', onPage)
+    document.addEventListener('keyup', onPage)
+    const escape = (type: string, target: Element) =>
+      target.dispatchEvent(new window.KeyboardEvent(type, { key: 'Escape', code: 'Escape', bubbles: true, composed: true, cancelable: true }) as unknown as Event)
+    button('Reading settings').click()
+    const inside = radio('Smart pacing', 'Off')
+    inside.focus()
+    escape('keydown', inside)
+    escape('keyup', button('Reading settings'))
+    expect(heard).toEqual([])
+    escape('keydown', button('Reading settings'))
+    escape('keyup', button('Reading settings'))
+    expect(heard).toEqual(['keydown:Escape', 'keyup:Escape'])
+    document.removeEventListener('keydown', onPage)
+    document.removeEventListener('keyup', onPage)
+  })
+
   test('lists the keys, with sentence steps on the plain arrows when the chunk is a sentence', () => {
     const bar = Bar.mount(actions, document)
     const keys = () => [...roots[0].querySelectorAll('.shortcuts > div')].map((row) => `${row.querySelector('dt')!.textContent} ${row.querySelector('dd')!.textContent}`)
