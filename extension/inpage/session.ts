@@ -268,6 +268,7 @@ export class InPageSession {
 
   private onHidden = () => {
     if (this.isPlaying) this.pause()
+    if (this.ready) this.store!.setPlace(this.key, { ...this.placeNow(), words: this.doc.words.length })
     void this.store?.flush()
   }
 
@@ -390,16 +391,21 @@ export class InPageSession {
     if (this.mapStale) this.rebuildMap()
   }
 
+  /** The word to resume and the paragraph a press would start from with the page scrolled as it is now. */
+  private placeNow(): { index: number; from: number } {
+    this.freshMap()
+    const away = this.userScrolled ? this.scrolledAway() : null
+    const from = away?.from ?? viewportStart(this.doc, this.map, this.win)?.from ?? 0
+    return { index: away?.at ?? this.index, from }
+  }
+
   /** Saves the place against the paragraph now in view, so the next press from here resumes this word. */
   async stop(reason: StopReason): Promise<{ index: number; from: number }> {
     if (!this.ready) {
       this.dispose()
       return { index: this.index, from: this.from }
     }
-    this.freshMap()
-    const away = this.userScrolled ? this.scrolledAway() : null
-    const from = away?.from ?? viewportStart(this.doc, this.map, this.win)?.from ?? 0
-    const index = away?.at ?? this.index
+    const { index, from } = this.placeNow()
     this.store!.setPlace(this.key, { index, words: this.doc.words.length, from })
     const saved = this.store!.flush()
     this.dispose()
@@ -512,7 +518,7 @@ export class InPageSession {
     this.follow.alongLine(range)
     if (this.lineAt < 0 || !map.sameLine(this.lineAt, i)) {
       this.lineAt = i
-      this.follow.toLine(range, this.checkCovered)
+      this.follow.toLine(range, this.onLine)
     }
     this.render()
     this.store!.setPlace(this.key, { index: i, words: doc.words.length, from: this.from })
@@ -536,7 +542,14 @@ export class InPageSession {
     return this.show(dir)
   }
 
-  private checkCovered = () => {
+  // A press after an extension reload resumes only when the saved paragraph matches the view, so keep it current as lines change.
+  private onLine = () => {
+    const start = viewportStart(this.doc, this.map, this.win)
+    if (start) this.from = start.from
+    this.checkCovered()
+  }
+
+  private checkCovered() {
     if (!this.isPlaying) return
     const range = this.map.rangeOf(this.chunk.start, this.chunk.end)
     if (!range || !this.map.covered(range)) {

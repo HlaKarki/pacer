@@ -407,6 +407,42 @@ describe('InPageSession', () => {
     expect(writes.length).toBe(writesBefore)
   })
 
+  test('keeps the saved paragraph in step with the page while playing, so a press after an extension reload resumes the word', async () => {
+    page()
+    root.scrollTop = 1000
+    const first = await begin()
+    for (let k = 0; k < 200 && nowPara() < 8; k++) {
+      await advance(100)
+      runFrames()
+    }
+    await advance(1500)
+    runFrames()
+    expect(nowPara()).toBe(8)
+    const runtime = (globalThis as unknown as { chrome: { runtime: { id?: string } } }).chrome.runtime
+    runtime.id = undefined
+    await advance(1000)
+    expect(first.ended()).toBe(1)
+    runtime.id = 'pacer'
+    const saved = data[KEY] as { index: number; from: number }
+    const second = await begin()
+    const n = docOf(second.session).words.length
+    expect(Math.round(lastState(second.bar).progress * (n - 1))).toBe(saved.index)
+    second.session.dispose()
+  })
+
+  test('saves the paragraph in view when the tab is hidden after the page scrolled on', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session } = await begin()
+    for (let k = 0; k < 200 && nowPara() < 8; k++) await advance(100)
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+    document.dispatchEvent(new window.Event('visibilitychange') as unknown as Event)
+    await flush()
+    Reflect.deleteProperty(document, 'visibilityState')
+    expect((data[KEY] as { from: number }).from).toBe(7)
+    session.dispose()
+  })
+
   test('pauses on a wheel and picks up at the paragraph in view once the line has left the screen', async () => {
     page()
     root.scrollTop = 1000
