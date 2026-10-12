@@ -331,6 +331,59 @@ describe('InPageSession', () => {
     second.session.dispose()
   })
 
+  test('stops with the place saved when the page goes to another path, and not for a hash change', async () => {
+    page()
+    root.scrollTop = 1000
+    const navigation = new EventTarget()
+    Object.defineProperty(win, 'navigation', { value: navigation, configurable: true })
+    const navigate = (url: string) => navigation.dispatchEvent(Object.assign(new Event('navigate'), { destination: { url }, downloadRequest: null }))
+    const { session, bar, ended } = await begin()
+    navigate('https://example.com/essay#s1')
+    expect(session.playing).toBe(true)
+    const writesBefore = writes.length
+    navigate('https://example.com/next')
+    await flush()
+    expect(ended()).toBe(1)
+    expect(bar.disposed).toBe(true)
+    expect(registry.size).toBe(0)
+    expect(writes.length).toBe(writesBefore + 1)
+    expect(writes.at(-1)).toHaveProperty([KEY])
+    Reflect.deleteProperty(win, 'navigation')
+  })
+
+  test('pauses and saves the place when the tab is hidden, and stops when the page unloads', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, ended } = await begin()
+    await advance(1500)
+    session.nextChunk()
+    const writesBefore = writes.length
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+    document.dispatchEvent(new window.Event('visibilitychange') as unknown as Event)
+    await flush()
+    expect(session.playing).toBe(false)
+    expect(writes.length).toBe(writesBefore + 1)
+    Reflect.deleteProperty(document, 'visibilityState')
+    win.dispatchEvent(new window.Event('pagehide') as unknown as Event)
+    await flush()
+    expect(ended()).toBe(1)
+    expect(registry.size).toBe(0)
+  })
+
+  test('leaves without saving on its next tick once the extension has reloaded', async () => {
+    page()
+    root.scrollTop = 1000
+    const { bar, ended } = await begin()
+    const writesBefore = writes.length
+    ;(globalThis as unknown as { chrome: { runtime: { id?: string } } }).chrome.runtime.id = undefined
+    await advance(1000)
+    expect(ended()).toBe(1)
+    expect(bar.disposed).toBe(true)
+    expect(registry.size).toBe(0)
+    await advance(3000)
+    expect(writes.length).toBe(writesBefore)
+  })
+
   test('pauses on a wheel and picks up at the paragraph in view once the line has left the screen', async () => {
     page()
     root.scrollTop = 1000

@@ -88,6 +88,13 @@ export class ExtensionStore implements SettingsStore {
     this.timer ??= setTimeout(() => void this.flush(), SAVE_DELAY_MS)
   }
 
+  /** Forgets places not yet written, for a copy of Pacer whose storage went away with an extension reload. */
+  drop() {
+    if (this.timer !== null) clearTimeout(this.timer)
+    this.timer = null
+    this.pending.clear()
+  }
+
   async flush(): Promise<void> {
     if (this.timer !== null) clearTimeout(this.timer)
     this.timer = null

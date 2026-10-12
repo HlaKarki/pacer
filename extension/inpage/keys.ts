@@ -1,4 +1,5 @@
 import { WPM_STEP } from '../../src/lib/settings'
+import { extensionGone } from './lifecycle'
 import type { WordMap } from './map'
 import type { StopReason } from './session'
 
@@ -29,6 +30,7 @@ export interface KeyTarget {
   prevSentence(): void
   nextSentence(): void
   nudgeWpm(delta: number): void
+  abandon(): void
 }
 
 /** What a click on the page drives. */
@@ -100,6 +102,11 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
   }
 
   const onKeyDown = (e: KeyboardEvent) => {
+    // A copy left by an extension reload lets the key through, so the page or the fresh copy gets it.
+    if (extensionGone()) {
+      session.abandon()
+      return
+    }
     if (e.isComposing || e.metaKey || e.ctrlKey || fromPacer(e)) return
     const action = actionFor(e)
     if (!action) return

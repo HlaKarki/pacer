@@ -44,7 +44,9 @@ beforeEach(() => {
     prevSentence: record('prevSentence'),
     nextSentence: record('nextSentence'),
     nudgeWpm: (delta) => void calls.push(`wpm:${delta}`),
+    abandon: record('abandon'),
   }
+  Object.assign(globalThis, { chrome: { runtime: { id: 'pacer' } } })
   document.addEventListener('keydown', onPage)
   document.addEventListener('keyup', onPage)
   detach = attachKeys(win, session)
@@ -91,7 +93,7 @@ describe('deepFocus', () => {
     const root = host.attachShadow({ mode: 'closed' })
     root.innerHTML = '<div contenteditable="true"></div>'
     Object.defineProperty(root, 'activeElement', { value: root.firstElementChild, configurable: true })
-    Object.assign(globalThis, { chrome: { dom: { openOrClosedShadowRoot: (el: Element) => (el === host ? root : null) } } })
+    Object.assign(globalThis, { chrome: { runtime: { id: 'pacer' }, dom: { openOrClosedShadowRoot: (el: Element) => (el === host ? root : null) } } })
     expect(deepFocus(eventFrom(host), document)?.getAttribute('contenteditable')).toBe('true')
   })
 
@@ -144,7 +146,7 @@ describe('attachKeys', () => {
     const root = host.attachShadow({ mode: 'closed' })
     root.innerHTML = '<textarea></textarea>'
     Object.defineProperty(root, 'activeElement', { value: root.firstElementChild, configurable: true })
-    Object.assign(globalThis, { chrome: { dom: { openOrClosedShadowRoot: (el: Element) => (el === host ? root : null) } } })
+    Object.assign(globalThis, { chrome: { runtime: { id: 'pacer' }, dom: { openOrClosedShadowRoot: (el: Element) => (el === host ? root : null) } } })
     const fromHost = new window.KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, composed: true, cancelable: true })
     Object.defineProperty(fromHost, 'composedPath', { value: () => [host, document.body, document.documentElement, document, window] })
     host.dispatchEvent(fromHost as unknown as Event)
@@ -179,6 +181,14 @@ describe('attachKeys', () => {
     bar.remove()
     expect(calls).toEqual([])
     expect(pageHeard.length).toBe(8)
+  })
+
+  test('lets go and passes the key on once the extension has reloaded', () => {
+    Object.assign(globalThis, { chrome: { runtime: {} } })
+    const down = press(document.body, ' ')
+    expect(down.defaultPrevented).toBe(false)
+    expect(calls).toEqual(['abandon'])
+    expect(pageHeard).toEqual(['keydown: ', 'keyup: '])
   })
 
   test('hands every key back to the page once detached', () => {

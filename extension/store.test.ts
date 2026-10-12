@@ -100,6 +100,15 @@ describe('ExtensionStore', () => {
     expect(await store.place('a')).toEqual(place(3))
   })
 
+  test('drop forgets the pending save', async () => {
+    const store = await ExtensionStore.load()
+    store.setPlace('a', place(4))
+    store.drop()
+    jest.advanceTimersByTime(2000)
+    await store.flush()
+    expect(writes).toEqual([])
+  })
+
   test('follows settings changed in another tab until disposed', async () => {
     const store = await ExtensionStore.load()
     const send = (wpm: number) => {

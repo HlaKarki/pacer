@@ -10,6 +10,7 @@ import { ExtensionStore, PAST_END, startFrom } from '../store'
 import { Follow, inView } from './follow'
 import { Bar } from './bar'
 import { attachClicks, attachKeys } from './keys'
+import { extensionGone, watchNavigation, watchPage } from './lifecycle'
 import { MIN_COVERAGE, WordMap } from './map'
 import { Marks, type Tone, type ToneRun } from './marks'
 import { viewportStart } from './start'
@@ -216,7 +217,12 @@ export class InPageSession {
     this.marks = Marks.mount(page)
     this.follow = Follow.attach(win, this.onUserScroll)
     this.unsubscribe = store.subscribe(this.onSettings)
-    this.detachers = [attachKeys(win, this), attachClicks(page, this)]
+    this.detachers = [
+      attachKeys(win, this),
+      attachClicks(page, this),
+      watchNavigation(win, this.key, () => void this.stop('navigate')),
+      watchPage(win, { hidden: this.onHidden, gone: () => void this.stop('pagehide') }),
+    ]
     this.ready = true
     if (again) this.waitAtEnd()
     else this.play()
@@ -224,7 +230,7 @@ export class InPageSession {
   }
 
   private gone(): boolean {
-    return this.disposed || !chrome.runtime?.id
+    return this.disposed || extensionGone()
   }
 
   private stopped(): ToggleResult {
@@ -257,6 +263,11 @@ export class InPageSession {
     const settings = this.settings()
     if (settings.pauses !== this.paced.pauses || settings.smart !== this.paced.smart) this.prefix = this.pace(settings)
     this.render()
+  }
+
+  private onHidden = () => {
+    if (this.isPlaying) this.pause()
+    void this.store?.flush()
   }
 
   private onUserScroll = () => {
@@ -383,6 +394,12 @@ export class InPageSession {
     return { index, from }
   }
 
+  /** Leaves without saving, for a copy of Pacer whose storage went away with an extension reload. */
+  abandon(): void {
+    this.store?.drop()
+    this.dispose()
+  }
+
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
@@ -422,6 +439,10 @@ export class InPageSession {
   }
 
   private run(dir: 1 | -1) {
+    if (extensionGone()) {
+      this.abandon()
+      return
+    }
     try {
       if (!this.show(dir) || !this.isPlaying) return
       const { wpm, chunk } = this.settings()
