@@ -444,10 +444,13 @@ export class Bar implements BarView {
 
   private toggleSettings(): void {
     if (this.closeSettings() || this.panel.hasAttribute('data-loading')) return
+    // Clicks never focus the bar's buttons, so a focused sliders button means the keyboard opened the panel.
+    const byKeys = (this.settingsButton.getRootNode() as ShadowRoot).activeElement === this.settingsButton
     this.settings.hidden = false
     this.settingsButton.setAttribute('aria-expanded', 'true')
     this.doc.addEventListener('pointerdown', this.onPointerDown, true)
     this.fitSettings()
+    if (byKeys) this.settings.querySelector<HTMLElement>('[aria-checked="true"]')?.focus()
   }
 
   closeSettings(): boolean {

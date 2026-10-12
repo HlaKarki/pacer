@@ -258,6 +258,18 @@ describe('Bar', () => {
     removed.mockRestore()
   })
 
+  test('focuses the first checked choice when the keyboard opens the panel, and leaves focus alone on a click', () => {
+    const bar = Bar.mount(actions, document)
+    bar.render(STATE)
+    const toggle = button('Reading settings')
+    toggle.click()
+    expect(roots[0].activeElement).toBeNull()
+    toggle.click()
+    toggle.focus()
+    toggle.click()
+    expect(roots[0].activeElement).toBe(radio('Words at a time', 'Phrase'))
+  })
+
   test('closes the panel on an Esc typed inside the bar, handing focus back to the sliders button', () => {
     const bar = Bar.mount(actions, document)
     bar.render(STATE)
