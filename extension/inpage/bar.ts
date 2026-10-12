@@ -161,7 +161,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .wpm { display: flex; align-items: center; }
 .wpm-value { min-width: 4.6em; text-align: center; font-size: 13px; color: var(--pc-muted); font-variant-numeric: tabular-nums; }
 .wpm-value strong { color: var(--pc-ink); font-weight: 600; }
-.middle { flex: 1 1 auto; min-width: 56px; display: flex; align-items: center; gap: 10px; padding-inline: 4px; }
+.middle { position: relative; flex: 1 1 auto; min-width: 56px; display: flex; align-items: center; gap: 10px; padding-inline: 4px; }
 .progress { position: relative; flex: 1 1 auto; width: 180px; min-width: 40px; height: 20px; display: flex; align-items: center; cursor: pointer; touch-action: none; }
 .progress::before, .fill { content: ''; position: absolute; left: 0; right: 0; height: 3px; border-radius: 3px; }
 .progress::before { background: var(--pc-rule); }
@@ -171,7 +171,10 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .text { padding: 0 12px; height: 32px; font-size: 13px; font-weight: 550; }
 .chunk { color: var(--pc-ink-soft); }
 .action { background: var(--pc-accent); color: var(--pc-accent-ink); }
-.panel[data-notice] .progress, .panel[data-notice] .time { display: none; }
+.panel[data-action] .progress, .panel[data-action] .time { display: none; }
+/* A plain notice sits over the hidden progress and time, so the bar keeps its width and Play stays under the pointer when reading starts. */
+.panel[data-notice]:not([data-action]) .progress, .panel[data-notice]:not([data-action]) .time { visibility: hidden; }
+.panel[data-notice]:not([data-action]) .notice { position: absolute; inset-inline: 4px; top: 50%; translate: 0 -50%; max-width: none; }
 .panel:not([data-notice]) .notice, .panel:not([data-action]) .action { display: none; }
 .panel[data-loading] .play, .panel[data-loading] .wpm, .panel[data-loading] .chunk, .panel[data-loading] .sliders { opacity: 0.4; pointer-events: none; }
 .settings {
@@ -226,7 +229,7 @@ kbd { margin-right: 4px; padding: 1px 6px; font: inherit; font-size: 12px; font-
 @media (max-width: 480px) {
   .panel { gap: 2px; }
   .time, .chunk { display: none; }
-  .panel[data-action] .wpm, .panel[data-notice]:not([data-action='readOn']) .open { display: none; }
+  .panel[data-action] .wpm, .panel[data-action] .sliders, .panel[data-notice]:not([data-action='readOn']) .open { display: none; }
   .wpm-value { min-width: 3.4em; }
   .middle { padding-inline: 6px; }
   .notice { font-size: 12px; }
