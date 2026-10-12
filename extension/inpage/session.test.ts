@@ -189,6 +189,7 @@ describe('InPageSession', () => {
     expect(bar.notices).toEqual(['Reading page'])
     expect([nowText(), nowPara()]).toEqual(['Paragraph', 6])
     expect(root.scrollTop).toBe(1000)
+    expect(bar.lines.at(-1)).toEqual({ top: topOfPara(6) - 1000, bottom: topOfPara(6) - 1000 + LINE })
     expect(lastState(bar)).toMatchObject({ playing: false, wpm: 300, chunk: 1, notice: ARMED })
     expect(session.playing).toBe(false)
     const n = docOf(session).words.length
@@ -214,6 +215,20 @@ describe('InPageSession', () => {
     expect([nowText(), nowPara()]).toEqual(['Paragraph', 10])
     expect(root.scrollTop).toBeCloseTo(topOfPara(10) - HEIGHT * 0.36, 6)
     expect(lastState(bar)).toMatchObject({ playing: false, notice: ARMED })
+    session.dispose()
+  })
+
+  test('tells the bar where a resumed armed line sits near the bottom, so the bar can move off it', async () => {
+    page()
+    root.scrollTop = 1000
+    const first = await begin()
+    const doc = docOf(first.session)
+    const { from } = await first.session.stop('esc')
+    data[KEY] = { index: doc.paragraphs[9].start, words: doc.words.length, from }
+    const { session, bar } = await begin()
+    expect([nowText(), nowPara(), root.scrollTop]).toEqual(['Paragraph', 9, 1000])
+    expect(bar.lines.at(-1)).toEqual({ top: topOfPara(9) - 1000, bottom: topOfPara(9) - 1000 + LINE })
+    expect(topOfPara(9) - 1000).toBeGreaterThan(HEIGHT * 0.8)
     session.dispose()
   })
 
