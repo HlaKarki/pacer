@@ -284,6 +284,26 @@ describe('InPageSession', () => {
     session.dispose()
   })
 
+  test('dims nothing as read before an armed reading starts, wherever the arrows or a click move it', async () => {
+    page()
+    const { session } = await begin()
+    expect(nowText()).toBe('How')
+    session.nextChunk()
+    session.nextChunk()
+    session.nextChunk()
+    expect([nowText(), readText()]).toEqual(['Paragraph', ''])
+    const target = document.querySelector('[data-para="3"]')!.firstChild!
+    document.caretPositionFromPoint = () => ({ offsetNode: target, offset: 0 }) as CaretPosition
+    const word = document.createRange()
+    word.setStart(target, 0)
+    const { left, top } = word.getClientRects()[0]
+    document.querySelector('[data-para="3"]')!.dispatchEvent(new window.MouseEvent('click', { bubbles: true, button: 0, clientX: left + 1, clientY: top + 1 }) as unknown as Event)
+    expect([nowText(), nowPara(), session.playing, readText()]).toEqual(['Paragraph', 3, true, ''])
+    await advance(1000)
+    expect(para(3).startsWith(`${readText()} ${nowText()}`)).toBe(true)
+    session.dispose()
+  })
+
   test('plays on the press with Start on press, and on Read on', async () => {
     page()
     data.settings = { autoStart: true }

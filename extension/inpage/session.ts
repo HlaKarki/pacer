@@ -376,7 +376,7 @@ export class InPageSession {
   jump(i: number, dir: 1 | -1 = 1): void {
     if (!this.ready) return
     this.index = Math.min(this.doc.words.length - 1, Math.max(0, i))
-    if (this.index < this.readFrom) this.resetRead(this.index)
+    if (this.armed || this.index < this.readFrom) this.resetRead(this.index)
     this.finished = false
     this.sincePlay = 0
     this.clearTimer()
