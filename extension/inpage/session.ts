@@ -567,14 +567,16 @@ export class InPageSession {
     this.runsTo = from
   }
 
-  /** Words read since this reading started, as one range per run of blocks with the same tone. */
+  /** Words read since this reading started, as one range per run of neighbouring blocks with the same tone. */
   private readRuns(upTo: number): ToneRun[] {
     if (upTo < this.runsTo) this.resetRead(this.readFrom)
     for (let i = this.runsTo; i < upTo; i++) {
-      if (this.map.blockOf(i) < 0) continue
+      const block = this.map.blockOf(i)
+      if (block < 0) continue
       const tone = this.map.toneOf(i)
       const last = this.runs.at(-1)
-      if (last?.tone === tone) last.end = i + 1
+      // A range spans every node between its ends, so a page block the article skips, like a sidebar, ends the run.
+      if (last?.tone === tone && block <= this.map.blockOf(last.end - 1) + 1) last.end = i + 1
       else this.runs.push({ tone, start: i, end: i + 1 })
     }
     this.runsTo = Math.max(this.runsTo, upTo)

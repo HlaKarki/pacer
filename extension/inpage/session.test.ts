@@ -412,6 +412,21 @@ describe('InPageSession', () => {
     session.dispose()
   })
 
+  test('leaves page text the article skips, like a sidebar between paragraphs, out of the read dimming', async () => {
+    page()
+    document.querySelector('[data-para="2"]')!.insertAdjacentHTML(
+      'beforebegin',
+      '<aside class="sidebar" data-top="250"><p>Subscribe today and get every new essay in your inbox, along with our weekly reading list.</p></aside>',
+    )
+    const promo = document.querySelector('aside p')!.firstChild!
+    const { session } = await begin()
+    for (let k = 0; k < 40 && nowPara() < 3; k++) await advance(500)
+    expect(nowPara()).toBe(3)
+    expect(readText()).toContain('Paragraph 2')
+    expect([...registry.get('pacer-read-light')!].some((range) => range.intersectsNode(promo))).toBe(false)
+    session.dispose()
+  })
+
   test('pauses when a contents link scrolls the page away and picks up at the paragraph in view', async () => {
     page()
     root.scrollTop = 1000
