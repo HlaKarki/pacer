@@ -3,6 +3,7 @@ import { FileUp } from 'lucide-react'
 import { ReaderScreen } from '../src/components/ReaderScreen'
 import { ImportError } from '../src/lib/import/errors'
 import { parse, type Doc } from '../src/lib/text'
+import { revealParagraph, showPdfPage, sourceOf, switchTo, type Source } from './back'
 import { frequency } from './frequency'
 import { paragraphOnPage, withPage } from './pages'
 import { FileAccessError, openDoc, openFile, PICKABLE, type Opened } from './source'
@@ -21,9 +22,12 @@ interface Reading {
   index: number
 }
 
-const canGoBack = () => history.length > 1
-
 const exitLabel = (opened: Opened) => (opened.src === null ? 'Files' : opened.pages ? 'PDF' : 'Page')
+
+const paragraphText = (doc: Doc, para: number) => {
+  const p = doc.paragraphs[para]
+  return p ? doc.words.slice(p.start, p.end).map((w) => w.text).join(' ') : ''
+}
 
 async function navigate(url: string) {
   // Chrome blocks extension pages from opening file: URLs directly, so go through the tabs API.
@@ -113,6 +117,11 @@ export function App({ store, docId }: { store: ExtensionStore; docId: string | n
   const shortcut = useShortcut()
   const opens = useRef(0)
   const reading = useRef<Reading | null>(null)
+  const [source, setSource] = useState<Source | null>(null)
+
+  useEffect(() => {
+    if (docId) sourceOf(docId).then(setSource, () => setSource(null))
+  }, [docId])
 
   useEffect(() => {
     const root = document.documentElement
@@ -179,25 +188,37 @@ export function App({ store, docId }: { store: ExtensionStore; docId: string | n
     const current = reading.current
     if (!current) return
     const { opened, doc, index } = current
-    const page = opened.pages ? (opened.pages[doc.words[index]?.para ?? 0] ?? 1) : null
-    if (opened.pages && page !== null) {
-      // Leaving opens the PDF at this page, so save the place against that page's first paragraph.
-      store.setPlace(opened.key, { index, words: doc.words.length, from: paragraphOnPage(opened.pages, page) })
-    }
-    await store.flush()
     if (opened.src === null) {
+      await store.flush()
       reading.current = null
       document.title = 'Pacer'
       setScreen({ kind: 'picker', error: null })
-    } else if (page !== null) {
-      await navigate(withPage(opened.src, page))
-    } else if (canGoBack()) {
-      // Going back lets Chrome restore the page from its back/forward cache, scroll position included.
-      history.back()
-    } else {
-      await navigate(opened.src)
+      return
     }
-  }, [store])
+
+    const para = doc.words[index]?.para ?? 0
+    const page = opened.pages ? (opened.pages[para] ?? 1) : null
+    const back = docId ? await sourceOf(docId) : null
+    // The next press starts from wherever the page is left, so save the place against that paragraph.
+    let from = opened.startParagraph
+    if (opened.pages && page !== null) {
+      if (!back || (await showPdfPage(back, page))) from = paragraphOnPage(opened.pages, page)
+    } else if (back) {
+      const scrolled = await revealParagraph(back, paragraphText(doc, para))
+      if (scrolled !== null) from = scrolled ? para : 0
+    } else {
+      from = 0
+    }
+    store.setPlace(opened.key, { index, words: doc.words.length, from })
+    await store.flush()
+
+    if (back && (await switchTo(back))) return
+    await navigate(page !== null ? withPage(opened.src, page) : opened.src)
+  }, [store, docId])
+
+  const goBack = useCallback(async () => {
+    if (source && !(await switchTo(source))) await navigate(source.src)
+  }, [source])
 
   switch (screen.kind) {
     case 'reader':
@@ -230,9 +251,9 @@ export function App({ store, docId }: { store: ExtensionStore; docId: string | n
           <p className="pc-page-lead" role="alert">
             {screen.message}
           </p>
-          {canGoBack() ? (
+          {source ? (
             <div className="pc-page-actions">
-              <button type="button" className="pc-btn" onClick={() => history.back()}>
+              <button type="button" className="pc-btn" onClick={() => void goBack()}>
                 Go back
               </button>
             </div>
@@ -256,8 +277,8 @@ export function App({ store, docId }: { store: ExtensionStore; docId: string | n
               Open Pacer’s settings
             </button>
             <ChooseFile onFile={pick} />
-            {canGoBack() ? (
-              <button type="button" className="pc-btn pc-btn-quiet" onClick={() => history.back()}>
+            {source ? (
+              <button type="button" className="pc-btn pc-btn-quiet" onClick={() => void goBack()}>
                 Go back
               </button>
             ) : null}

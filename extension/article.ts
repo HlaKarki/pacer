@@ -15,6 +15,9 @@ const OPENING_WORDS = 8
 const MAX_OPENINGS = 12
 const CANDIDATES = 'p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, dd, figcaption'
 
+/** Sticky headers usually cover about this share of the window top, so text under it does not count as in view. */
+export const HEADER_STRIP = 0.15
+
 /** The first few words, without case or punctuation, so a page paragraph and its extracted block compare equal. */
 export const opening = (text: string) =>
   text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').slice(0, OPENING_WORDS).join(' ')
@@ -30,6 +33,17 @@ export function openingsAtTop(doc: Document, below: number): string[] {
     if (out.length >= MAX_OPENINGS) break
   }
   return out
+}
+
+/** Scrolls the first block with this opening to just under the header strip. Says whether the page is left scrolled, or null when no block matches. */
+export function revealOpening(doc: Document, win: Window, key: string, below: number): boolean | null {
+  if (!key) return null
+  for (const el of doc.body?.querySelectorAll(CANDIDATES) ?? []) {
+    if (opening(el.textContent ?? '') !== key) continue
+    win.scrollTo({ top: el.getBoundingClientRect().top + win.scrollY - below, behavior: 'instant' })
+    return win.scrollY > 0
+  }
+  return null
 }
 
 /** The first block that one of the openings starts, trying them in order since the top of the window can hold a sidebar. */

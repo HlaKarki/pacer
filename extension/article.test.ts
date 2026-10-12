@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { Window } from 'happy-dom'
 import { parse } from '../src/lib/text'
-import { extractArticle, matchParagraph, opening, siteless } from './article'
+import { extractArticle, matchParagraph, opening, revealOpening, siteless } from './article'
 
 const window = new Window()
 globalThis.Node = window.Node as unknown as typeof Node
@@ -98,5 +98,39 @@ describe('matchParagraph', () => {
   test('starts at the top when nothing matches', () => {
     expect(matchParagraph(blocks, [opening('Related posts')])).toBe(0)
     expect(matchParagraph(blocks, [])).toBe(0)
+  })
+})
+
+describe('revealOpening', () => {
+  function scroller() {
+    const doc = page(ARTICLE)
+    const top = new Map([...doc.querySelectorAll('p')].map((p, i) => [p, 400 + i * 200]))
+    for (const [p, y] of top) p.getBoundingClientRect = () => ({ top: y - win.scrollY }) as DOMRect
+    const win = {
+      scrollY: 0,
+      scrollTo({ top }: ScrollToOptions) {
+        win.scrollY = Math.max(0, top ?? 0)
+      },
+    }
+    return { doc, win: win as unknown as Window & { scrollY: number } }
+  }
+
+  test('scrolls the matching paragraph to just under the header strip', () => {
+    const { doc, win } = scroller()
+    const text = doc.querySelectorAll('p')[3]!.textContent!
+    expect(revealOpening(doc, win, opening(text), 100)).toBe(true)
+    expect(win.scrollY).toBe(400 + 3 * 200 - 100)
+  })
+
+  test('reports an unscrolled page when the paragraph sits near the top', () => {
+    const { doc, win } = scroller()
+    expect(revealOpening(doc, win, opening(doc.querySelector('p')!.textContent!), 500)).toBe(false)
+  })
+
+  test('leaves the page alone when nothing matches', () => {
+    const { doc, win } = scroller()
+    expect(revealOpening(doc, win, opening('Nothing on this page starts like this'), 100)).toBeNull()
+    expect(revealOpening(doc, win, '', 100)).toBeNull()
+    expect(win.scrollY).toBe(0)
   })
 })

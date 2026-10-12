@@ -1,3 +1,4 @@
+import { rememberSource } from './back'
 import { putDoc, type DocRecord } from './docs'
 import type { Extracted } from './extract'
 
@@ -120,13 +121,19 @@ async function paceTab(tab: chrome.tabs.Tab) {
   try {
     record = await recordFor(tab, tabId)
     await putDoc(record)
+    await rememberSource(record.id, { tabId, src: record.src })
   } catch (error) {
     // Chrome refuses scripts on its own pages and the Web Store, so those end up here.
     console.warn('Pacer could not read the tab.', error)
     await refuse(tabId)
     return
   }
-  await chrome.tabs.update(tabId, { url: `${READER}?doc=${record.id}` })
+  await chrome.tabs.create({
+    url: `${READER}?doc=${record.id}`,
+    windowId: tab.windowId,
+    index: tab.index + 1,
+    openerTabId: tabId,
+  })
 }
 
 chrome.action.onClicked.addListener((tab) => void paceTab(tab))
