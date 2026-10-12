@@ -359,7 +359,10 @@ describe('InPageSession', () => {
     root.scrollTop = 1000
     const navigation = new EventTarget()
     Object.defineProperty(win, 'navigation', { value: navigation, configurable: true })
-    const navigate = (url: string) => navigation.dispatchEvent(Object.assign(new Event('navigate'), { destination: { url }, downloadRequest: null }))
+    const navigate = (url: string) => {
+      Object.assign(navigation, { currentEntry: { url } })
+      navigation.dispatchEvent(new Event('currententrychange'))
+    }
     const { session, bar, ended } = await begin()
     navigate('https://example.com/essay#s1')
     expect(session.playing).toBe(true)

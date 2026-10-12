@@ -11,6 +11,11 @@ function navigate(target: EventTarget, url: string, downloadRequest: string | nu
   target.dispatchEvent(Object.assign(new Event('navigate'), { destination: { url }, downloadRequest }))
 }
 
+function commit(target: EventTarget, url: string) {
+  Object.assign(target, { currentEntry: { url } })
+  target.dispatchEvent(new Event('currententrychange'))
+}
+
 afterEach(() => {
   Reflect.deleteProperty(win, 'navigation')
   Reflect.deleteProperty(document, 'visibilityState')
@@ -25,21 +30,32 @@ test('extensionGone is true once the runtime id is gone', () => {
 })
 
 describe('watchNavigation', () => {
-  test('leaves for another path or query, and not for hash changes or downloads', () => {
+  test('leaves when the address moves to another path or query, and not for hash changes', () => {
     const navigation = new EventTarget()
     Object.defineProperty(win, 'navigation', { value: navigation, configurable: true })
     let left = 0
     const detach = watchNavigation(win, KEY, () => left++)
-    navigate(navigation, `${KEY}#s1`)
-    navigate(navigation, KEY)
-    navigate(navigation, 'https://example.com/report.pdf', 'report.pdf')
+    commit(navigation, `${KEY}#s1`)
+    commit(navigation, KEY)
     expect(left).toBe(0)
-    navigate(navigation, `${KEY}?page=2`)
-    navigate(navigation, 'https://example.com/next')
+    commit(navigation, `${KEY}?page=2`)
+    commit(navigation, 'https://example.com/next')
     expect(left).toBe(2)
     detach()
-    navigate(navigation, 'https://example.com/other')
+    commit(navigation, 'https://example.com/other')
     expect(left).toBe(2)
+  })
+
+  test('keeps reading through mail links and downloads, which start a navigation that never leaves the page', () => {
+    const navigation = new EventTarget()
+    Object.defineProperty(win, 'navigation', { value: navigation, configurable: true })
+    let left = 0
+    const detach = watchNavigation(win, KEY, () => left++)
+    navigate(navigation, 'mailto:someone@example.com')
+    navigate(navigation, 'https://example.com/report.csv')
+    navigate(navigation, 'https://example.com/report.pdf', 'report.pdf')
+    expect(left).toBe(0)
+    detach()
   })
 
   test('does nothing where the browser has no Navigation API', () => {
