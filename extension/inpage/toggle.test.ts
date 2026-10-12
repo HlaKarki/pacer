@@ -145,6 +145,20 @@ describe('createInPage', () => {
     quiet.mockRestore()
   })
 
+  test('answers with the error when the page cannot hold a toast either', async () => {
+    const quiet = spyOn(console, 'error').mockImplementation(() => undefined)
+    const show = spyOn(Toast, 'show').mockImplementation(() => {
+      throw new Error("Failed to execute 'attachShadow' on 'Element'")
+    })
+    const page = createInPage(win, fakeSession)
+    const pressed = page.toggle()
+    await tick()
+    made[0].finish(new TypeError('boom'))
+    expect(await pressed).toEqual({ kind: 'error', message: 'Pacer could not read this page.' })
+    show.mockRestore()
+    quiet.mockRestore()
+  })
+
   test('clears what a copy from before an extension reload left on the page', async () => {
     document.documentElement.append(document.createElement('pacer-bar'), document.createElement('pacer-toast'))
     registry.set('pacer-now-light', {}).set('pacer-read-dark', {}).set('site-search', {})

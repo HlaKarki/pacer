@@ -86,7 +86,12 @@ export function createInPage(
       session = null
       if (!(error instanceof ImportError)) console.error(error)
       const message = error instanceof ImportError ? error.message : UNREADABLE
-      Toast.show(message, win.document)
+      try {
+        Toast.show(message, win.document)
+      } catch (failure) {
+        // XML and SVG documents refuse shadow roots, so the service worker gets the error without a toast.
+        console.error(failure)
+      }
       return { kind: 'error', message }
     } finally {
       starting = false

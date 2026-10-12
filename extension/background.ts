@@ -18,6 +18,7 @@ const CHUNK_BYTES = 8 * 1024 * 1024
 const READER = chrome.runtime.getURL('reader.html')
 const PICKER_PAGES = /^(chrome:\/\/(newtab|new-tab-page)\/?|about:blank)$/
 const PRESS_GAP_MS = 300
+const IN_PAGE_TYPES = new Set(['text/html', 'application/xhtml+xml', 'text/plain'])
 const DEFAULT_TITLE = chrome.runtime.getManifest().action?.default_title ?? 'Pace this page'
 const lastPress = new Map<number, number>()
 
@@ -27,7 +28,7 @@ async function run<Args extends unknown[], Result>(
   ...args: Args
 ): Promise<Awaited<Result>> {
   const [frame] = await chrome.scripting.executeScript({ target: { tabId }, func, args })
-  if (!frame || frame.result === undefined) throw new Error('The script returned nothing.')
+  if (!frame || frame.result == null) throw new Error('The script returned nothing.')
   return frame.result as Awaited<Result>
 }
 
@@ -131,11 +132,11 @@ function pressedRecently(tabId: number): boolean {
   return last !== undefined && now - last < PRESS_GAP_MS
 }
 
-/** PDFs and local files Pacer may not read go to the reader tab, and every other page is read in place. */
+/** HTML and plain text are read in place. PDFs, XML, SVG and local files Pacer may not read go to the reader tab. */
 async function routeOf(tab: chrome.tabs.Tab, tabId: number): Promise<'tab' | 'page'> {
   if (tab.url?.startsWith('file:') && !(await chrome.extension.isAllowedFileSchemeAccess())) return 'tab'
   const probe = await probeTab(tabId)
-  return probe.contentType === 'application/pdf' ? 'tab' : 'page'
+  return IN_PAGE_TYPES.has(probe.contentType) ? 'page' : 'tab'
 }
 
 /** A new document or a reloaded extension has no copy of the page script yet, so that is when the styles go in too. */

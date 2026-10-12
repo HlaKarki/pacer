@@ -134,6 +134,34 @@ describe('paceTab', () => {
     expect(created[0]).toMatchObject({ index: 4, openerTabId: 3 })
   })
 
+  test('reads plain text and XHTML in place, and opens the reader tab for XML, SVG and JSON', async () => {
+    const routes: Record<string, string[]> = {
+      'text/plain': ['inpage.css', 'inpage.js'],
+      'application/xhtml+xml': ['inpage.css', 'inpage.js'],
+      'application/xml': ['extract.js'],
+      'image/svg+xml': ['extract.js'],
+      'application/json': ['extract.js'],
+    }
+    for (const [k, [contentType, files]] of Object.entries(routes).entries()) {
+      page.contentType = contentType
+      injected = []
+      created = []
+      Reflect.deleteProperty(globalThis, '__pacerInPage')
+      await paceTab(tabOf(20 + k))
+      expect([contentType, injected]).toEqual([contentType, files])
+      expect([contentType, created.length]).toEqual([contentType, files.includes('extract.js') ? 1 : 0])
+    }
+  })
+
+  test('marks the button when the page script answers nothing', async () => {
+    const warn = spyOn(console, 'warn').mockImplementation(() => undefined)
+    toggleResult = null as unknown as ToggleResult
+    await paceTab(tabOf(30))
+    expect(badges[30]?.text).toBe('!')
+    expect(String(warn.mock.calls[0]?.[1])).toContain('The script returned nothing.')
+    warn.mockRestore()
+  })
+
   test('opens the reader tab for a local file Pacer may not read', async () => {
     fileAccess = false
     await paceTab(tabOf(4, 'file:///Users/me/notes.html'))
