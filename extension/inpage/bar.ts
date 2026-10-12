@@ -63,6 +63,7 @@ const CSS = `
   z-index: 2147483647;
   translate: -50% 0;
   box-sizing: border-box;
+  width: max-content;
   max-width: calc(100vw - 32px);
   display: flex;
   align-items: center;
@@ -117,7 +118,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .progress::before { background: var(--pc-rule); }
 .fill { background: var(--pc-ink-soft); transform-origin: left center; transform: scaleX(0); transition: transform 200ms linear; }
 .time { font-size: 13px; color: var(--pc-muted); font-variant-numeric: tabular-nums; }
-.notice { margin: 0; flex: 1 1 auto; width: 180px; min-width: 40px; overflow: hidden; text-overflow: ellipsis; color: var(--pc-ink); }
+.notice { margin: 0; flex: 1 1 auto; min-width: 40px; max-width: 320px; white-space: normal; line-height: 1.25; font-size: 13px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; color: var(--pc-ink); }
 .text { padding: 0 12px; height: 32px; font-size: 13px; font-weight: 550; }
 .chunk { color: var(--pc-ink-soft); }
 .action { background: var(--pc-accent); color: var(--pc-accent-ink); }
@@ -131,6 +132,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 @media (max-width: 480px) {
   .panel { gap: 2px; }
   .time, .chunk { display: none; }
+  .panel[data-notice] .wpm, .panel[data-action='openTab'] .open { display: none; }
   .wpm-value { min-width: 3.4em; }
   .middle { padding-inline: 6px; }
 }
@@ -231,7 +233,7 @@ export class Bar implements BarView {
     middle.append(this.progress, this.time, this.noticeText, this.action)
 
     this.chunk = this.button('text chunk', 'Words at a time', () => actions.cycleChunk())
-    const openTab = this.button('icon', 'Open in a Pacer tab', () => actions.openTab(), ICONS.openTab)
+    const openTab = this.button('icon open', 'Open in a Pacer tab', () => actions.openTab(), ICONS.openTab)
     const close = this.button('icon', 'Stop reading', () => actions.close(), ICONS.close)
     panel.append(this.play, wpm, middle, this.chunk, openTab, close)
     root.append(panel)
@@ -261,7 +263,7 @@ export class Bar implements BarView {
     this.noticeText.textContent = text
     this.noticeAction = action ?? null
     if (action) {
-      this.panel.dataset.action = ''
+      this.panel.dataset.action = action
       this.action.textContent = ACTION_LABELS[action]
     } else {
       delete this.panel.dataset.action
