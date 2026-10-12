@@ -1,25 +1,37 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
-import { Reader } from '../src/components/Reader'
-import type { Doc } from '../src/lib/text'
-import { weightPrefix } from '../src/lib/timing'
-import { frequency } from './frequency'
-import type { PacerStore } from './places'
+import type { FrequencyMap } from '../lib/frequency'
+import type { SettingsStore } from '../lib/storage'
+import type { Doc } from '../lib/text'
+import { weightPrefix } from '../lib/timing'
+import { Reader } from './Reader'
 
 interface ReaderScreenProps {
   doc: Doc
   title: string
   initialIndex: number
-  store: PacerStore
-  keyTarget: HTMLElement
+  store: SettingsStore
+  freq: FrequencyMap | null
+  keyTarget: EventTarget
   exitLabel: string | null
   onIndex: (index: number) => void
   onExit: () => void
+  showTheme?: boolean
 }
 
-export function ReaderScreen({ doc, title, initialIndex, store, keyTarget, exitLabel, onIndex, onExit }: ReaderScreenProps) {
+export function ReaderScreen({
+  doc,
+  title,
+  initialIndex,
+  store,
+  freq,
+  keyTarget,
+  exitLabel,
+  onIndex,
+  onExit,
+  showTheme = false,
+}: ReaderScreenProps) {
   const settings = useSyncExternalStore(store.subscribe, store.getSettings)
   const [index, setIndexState] = useState(initialIndex)
-  const freq = useMemo(() => frequency(), [])
   const prefix = useMemo(
     () => weightPrefix(doc, { pauses: settings.pauses, smart: settings.smart, freq }),
     [doc, settings.pauses, settings.smart, freq],
@@ -43,7 +55,7 @@ export function ReaderScreen({ doc, title, initialIndex, store, keyTarget, exitL
       onExit={exitLabel ? onExit : undefined}
       exitLabel={exitLabel ?? undefined}
       keyTarget={keyTarget}
-      showTheme={false}
+      showTheme={showTheme}
     />
   )
 }

@@ -6,4 +6,6 @@ export class ImportError extends Error {
 export interface Imported {
   title: string | null
   text: string
+  /** The 1-based page of each paragraph, for PDFs. */
+  pages?: number[]
 }

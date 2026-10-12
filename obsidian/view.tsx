@@ -1,10 +1,11 @@
 import { FileView, type TFile, type ViewStateResult, type WorkspaceLeaf } from 'obsidian'
 import { createRoot, type Root } from 'react-dom/client'
+import { ReaderScreen } from '../src/components/ReaderScreen'
 import { ImportError } from '../src/lib/import/errors'
 import { parse, type Doc } from '../src/lib/text'
+import { frequency } from './frequency'
 import type PacerPlugin from './main'
 import { lineAtWord, startIndex } from './note'
-import { ReaderScreen } from './ReaderScreen'
 import { loadSource } from './source'
 
 export const VIEW_TYPE = 'pacer'
@@ -162,6 +163,7 @@ export class PacerView extends FileView {
           title={screen.title}
           initialIndex={screen.index}
           store={this.plugin.store}
+          freq={frequency()}
           keyTarget={this.rootEl}
           exitLabel={screen.exitLabel}
           onIndex={this.onIndex}

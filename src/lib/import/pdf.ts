@@ -50,7 +50,7 @@ export async function extractPdf(
       page.cleanup()
     }
 
-    const text = paragraphsFromPages(stripRunningHeads(pages), isWord)
+    const { text, pages: paragraphPages } = paragraphsFromPages(stripRunningHeads(pages), isWord)
     if (text.replace(/\s/g, '').length < doc.numPages * 20) {
       throw new ImportError(
         'This PDF has no selectable text. It is probably scanned pages, which Pacer cannot read yet.',
@@ -59,7 +59,7 @@ export async function extractPdf(
     const meta = await doc.getMetadata().catch(() => null)
     const metaTitle = (meta?.info as { Title?: string } | undefined)?.Title?.trim()
     const title = metaTitle && !JUNK_TITLE.test(metaTitle) ? metaTitle : null
-    return { title, text }
+    return { title, text, pages: paragraphPages }
   } finally {
     await task.destroy()
   }

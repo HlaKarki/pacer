@@ -96,9 +96,13 @@ export function joinLines(a: string, b: string, isWord?: (w: string) => boolean)
 const ENDS_SENTENCE = /[.!?:…]["'”’)\]]*$/
 const NUMBERED_HEADING = /^(?:\d{1,2}(?:\.\d{1,2})*\.?|[A-Z]\.(?:\d{1,2}\.?)*)\s+\p{Lu}[^.!?;,]*$/u
 
-export function paragraphsFromPages(pages: PdfLine[][], isWord?: (w: string) => boolean): string {
+/** `pages` holds the 1-based page each paragraph starts on, so paragraph k of the text is on page pages[k]. */
+export function paragraphsFromPages(
+  pages: PdfLine[][],
+  isWord?: (w: string) => boolean,
+): { text: string; pages: number[] } {
   const all = pages.flatMap((lines, page) => lines.map((line) => ({ ...line, page })))
-  if (!all.length) return ''
+  if (!all.length) return { text: '', pages: [] }
 
   const weightedSizes = all.flatMap((l) => Array(Math.min(20, Math.ceil(l.text.length / 10))).fill(l.size))
   const body = median(weightedSizes)
@@ -118,7 +122,9 @@ export function paragraphsFromPages(pages: PdfLine[][], isWord?: (w: string) => 
     l.size >= body * 1.2 && l.text.split(' ').length <= 15
 
   const out: string[] = []
+  const outPages: number[] = []
   let paragraph = ''
+  let paragraphPage = 0
   let lineCount = 0
   let heading: { text: string; size: number; page: number } | null = null
   const flushParagraph = () => {
@@ -126,6 +132,7 @@ export function paragraphsFromPages(pages: PdfLine[][], isWord?: (w: string) => 
       const numbered =
         lineCount === 1 && paragraph.split(' ').length <= 10 && NUMBERED_HEADING.test(paragraph)
       out.push(numbered ? `### ${paragraph}` : escapeBody(paragraph))
+      outPages.push(paragraphPage + 1)
     }
     paragraph = ''
     lineCount = 0
@@ -136,6 +143,7 @@ export function paragraphsFromPages(pages: PdfLine[][], isWord?: (w: string) => 
       // Large lines that run on and end in a full stop are a notice or a pull quote, so they read as body text.
       const prose = words > 20 || (words > 8 && ENDS_SENTENCE.test(heading.text))
       out.push(prose ? escapeBody(heading.text) : `${heading.size >= body * 1.6 ? '#' : '##'} ${heading.text}`)
+      outPages.push(heading.page + 1)
     }
     heading = null
   }
@@ -155,6 +163,7 @@ export function paragraphsFromPages(pages: PdfLine[][], isWord?: (w: string) => 
     flushHeading()
     if (!paragraph || !prev) {
       paragraph = line.text
+      paragraphPage = line.page
       lineCount = 1
       return
     }
@@ -168,6 +177,7 @@ export function paragraphsFromPages(pages: PdfLine[][], isWord?: (w: string) => 
     if (blankLine || indented || shortEnd || afterTitle) {
       flushParagraph()
       paragraph = line.text
+      paragraphPage = line.page
       lineCount = 1
     } else {
       paragraph = joinLines(paragraph, line.text, isWord)
@@ -179,5 +189,6 @@ export function paragraphsFromPages(pages: PdfLine[][], isWord?: (w: string) => 
   // Chapter titles are unique, so a large label that repeats belongs to a figure and stays out of the contents.
   const counts = new Map<string, number>()
   for (const p of out) if (/^##? /.test(p)) counts.set(p, (counts.get(p) ?? 0) + 1)
-  return out.map((p) => ((counts.get(p) ?? 0) > 1 ? p.replace(/^##? /, '### ') : p)).join('\n\n')
+  const text = out.map((p) => ((counts.get(p) ?? 0) > 1 ? p.replace(/^##? /, '### ') : p)).join('\n\n')
+  return { text, pages: outPages }
 }

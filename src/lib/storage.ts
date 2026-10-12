@@ -15,6 +15,13 @@ export interface Settings {
   size: TextSize
 }
 
+/** Settings kept outside the page, so every reader the host opens shares them. */
+export interface SettingsStore {
+  getSettings: () => Settings
+  subscribe: (listener: () => void) => () => void
+  updateSettings: (patch: Partial<Settings>) => void
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   wpm: 300,
   chunk: 1,

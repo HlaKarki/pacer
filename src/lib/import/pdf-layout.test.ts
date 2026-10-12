@@ -7,6 +7,7 @@ import {
   type PdfItem,
   type PdfLine,
 } from './pdf-layout'
+import { parse } from '../text'
 
 const item = (str: string, x: number, y: number, eol = false, size = 10): PdfItem => ({
   str,
@@ -103,7 +104,7 @@ describe('paragraphsFromPages', () => {
       line('Skilled readers make fewer fixations per line, and they', 672, 90),
       line('rarely land on short words.', 658),
     ]
-    expect(paragraphsFromPages([page])).toBe(
+    expect(paragraphsFromPages([page]).text).toBe(
       'Your eyes do not glide across a page. They jump, and each jump is called a saccade.\n\n' +
         'Skilled readers make fewer fixations per line, and they rarely land on short words.',
     )
@@ -115,7 +116,23 @@ describe('paragraphsFromPages', () => {
       line('and ends here', 686),
       line('Second paragraph starts after a gap and runs on across', 650),
     ]
-    expect(paragraphsFromPages([page]).split('\n\n')).toHaveLength(2)
+    expect(paragraphsFromPages([page]).text.split('\n\n')).toHaveLength(2)
+  })
+
+  test('maps each paragraph to the page it starts on', () => {
+    const pages = [
+      [
+        line('Introduction', 740, 72, 16, 200),
+        line('The paragraph runs to the bottom of the page and keeps', 60),
+      ],
+      [
+        line('going on the next page without a break.', 760, 72, 10, 300),
+        line('A second paragraph starts on the second page and runs on', 746, 90),
+      ],
+    ]
+    const { text, pages: map } = paragraphsFromPages(pages)
+    expect(parse(text).paragraphs).toHaveLength(map.length)
+    expect(map).toEqual([1, 1, 2])
   })
 
   test('continues a paragraph across a page break', () => {
@@ -123,7 +140,7 @@ describe('paragraphsFromPages', () => {
       [line('The paragraph runs to the bottom of the page and keeps', 60)],
       [line('going on the next page without a break.', 760)],
     ]
-    expect(paragraphsFromPages(pages)).toBe(
+    expect(paragraphsFromPages(pages).text).toBe(
       'The paragraph runs to the bottom of the page and keeps going on the next page without a break.',
     )
   })
@@ -136,7 +153,7 @@ describe('paragraphsFromPages', () => {
         line(`Body line ${i} with enough words to count as text here`, 680 - i * 14),
       ),
     ]
-    const [heading] = paragraphsFromPages([page]).split('\n\n')
+    const [heading] = paragraphsFromPages([page]).text.split('\n\n')
     expect(heading).toBe('# Chapter One The Beginning')
   })
 
@@ -148,7 +165,7 @@ describe('paragraphsFromPages', () => {
         line(`Body line ${i} with enough words to count as text here`, 680 - i * 14),
       ),
     ]
-    const [first] = paragraphsFromPages([page]).split('\n\n')
+    const [first] = paragraphsFromPages([page]).text.split('\n\n')
     expect(first).toBe('Permission is granted to reproduce the tables and figures in this paper for scholarly works.')
   })
 
@@ -158,11 +175,11 @@ describe('paragraphsFromPages', () => {
       line('An attention function maps a query and a set of pairs', 672),
       line('to an output.', 658, 72, 10, 160),
     ]
-    expect(paragraphsFromPages([page]).split('\n\n')[0]).toBe('### 3.2 Scaled Attention')
+    expect(paragraphsFromPages([page]).text.split('\n\n')[0]).toBe('### 3.2 Scaled Attention')
   })
 
   test('escapes body text that starts with a hash', () => {
     const page = [line('# layers 1+2n 2n 2n', 700, 72, 10, 200)]
-    expect(paragraphsFromPages([page])).toBe('\\# layers 1+2n 2n 2n')
+    expect(paragraphsFromPages([page]).text).toBe('\\# layers 1+2n 2n 2n')
   })
 })
