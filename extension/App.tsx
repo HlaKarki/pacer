@@ -297,8 +297,8 @@ export function App({ store, docId }: { store: ExtensionStore; docId: string | n
           <p className="pc-page-note" data-error={screen.error ? true : undefined} role={screen.error ? 'alert' : undefined}>
             {screen.error ??
               (shortcut
-                ? `On a web page or PDF, press the Pacer button or ${shortcut} to read that tab here.`
-                : 'On a web page or PDF, press the Pacer button to read that tab here.')}
+                ? `On a web page, press the Pacer button or ${shortcut} to read it in place. PDFs open here.`
+                : 'On a web page, press the Pacer button to read it in place. PDFs open here.')}
           </p>
         </Page>
       )
