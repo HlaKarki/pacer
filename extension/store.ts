@@ -15,6 +15,9 @@ const isObject = (value: unknown): value is Record<string, unknown> => typeof va
 const isPlace = (value: unknown): value is Place =>
   isObject(value) && typeof value.index === 'number' && typeof value.words === 'number' && typeof value.from === 'number'
 
+/** `from` for a press below the article, where only comments or a footer are in view. */
+export const PAST_END = -1
+
 /** A saved place wins unless reading now starts from a different paragraph than it did then. Otherwise reading starts at `at`. */
 export function startFrom(
   doc: Doc,
@@ -23,7 +26,9 @@ export function startFrom(
   at = doc.paragraphs[from]?.start ?? 0,
 ): number {
   const last = Math.max(0, doc.words.length - 1)
-  if (saved && saved.words === doc.words.length && saved.from === from) return Math.min(saved.index, last)
+  // Below the article no paragraph is in view to start from, so any saved place for this page is the better guess.
+  const resumes = saved?.from === from || from === PAST_END
+  if (saved && saved.words === doc.words.length && resumes) return Math.min(saved.index, last)
   return Math.min(at, last)
 }
 
