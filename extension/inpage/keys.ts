@@ -6,16 +6,9 @@ import type { StopReason } from './session'
 const OWN_HOST = /^pacer-/
 const EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role=textbox]'
 const ROLES = 'button link tab slider listbox menu menuitem tree grid combobox radio checkbox switch option spinbutton'
-const INTERACTIVE = [
-  'a[href]',
-  'button',
-  'summary',
-  'video',
-  'audio',
-  '[tabindex]:not([tabindex="-1"])',
-  ...ROLES.split(' ').map((role) => `[role=${role}]`),
-].join(', ')
-const CLICKABLE = `${INTERACTIVE}, ${EDITABLE}, label`
+const CONTROLS = ['a[href]', 'button', 'summary', 'video', 'audio', ...ROLES.split(' ').map((role) => `[role=${role}]`)].join(', ')
+const FOCUSABLE = '[tabindex]:not([tabindex="-1"])'
+const CLICKABLE = `${CONTROLS}, ${EDITABLE}, label`
 const MODAL = 'dialog[open], [aria-modal="true"], :popover-open'
 
 /** What the reading keys drive. */
@@ -46,12 +39,14 @@ const isElement = (node: unknown): node is Element => (node as Node | null)?.nod
 
 const editable = (el: Element) => el.matches(EDITABLE) || (el as HTMLElement).isContentEditable === true
 
-/** True when focus is on the page or its text, so Space and the arrows belong to Pacer there. */
-export function isReadingFocus(el: Element | null): boolean {
+/** True when focus is on the page or its text, so Space and the arrows belong to Pacer there. A box a click focused counts as text. */
+export function isReadingFocus(el: Element | null, clicked = false): boolean {
   if (!el) return true
   const doc = el.ownerDocument
   if (el === doc.body || el === doc.documentElement) return true
-  return !editable(el) && !el.matches(INTERACTIVE)
+  if (editable(el) || el.matches(CONTROLS)) return false
+  // GitHub makes the whole README focusable, so only a box the keyboard focused keeps the keys from Pacer.
+  return clicked || !el.matches(FOCUSABLE)
 }
 
 function shadowOf(el: Element): ShadowRoot | null {
@@ -77,6 +72,8 @@ const modalOpen = (doc: Document) => [...doc.querySelectorAll(MODAL)].some((el) 
 export function attachKeys(win: Window, session: KeyTarget): () => void {
   const doc = win.document
   const handled = new Set<string>()
+  const byClick = (el: Element | null) => (el && !el.matches(':focus-visible') ? el : null)
+  let clicked = byClick(doc.activeElement)
 
   const actionFor = (e: KeyboardEvent): (() => void) | null => {
     const focus = deepFocus(e, doc)
@@ -84,7 +81,7 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
       if (modalOpen(doc) || (focus && editable(focus))) return null
       return () => (session.playing ? session.pause() : void session.stop('esc'))
     }
-    if (!isReadingFocus(focus)) return null
+    if (!isReadingFocus(focus, focus === clicked)) return null
     switch (e.key) {
       case ' ':
         // A held Space would flicker between play and pause, so only the first press counts.
@@ -120,12 +117,18 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
     e.preventDefault()
     e.stopImmediatePropagation()
   }
+  // Chrome marks any focus as focus-visible once a key goes down, so tell a click's focus from a Tab's as it lands.
+  const onFocus = (e: FocusEvent) => {
+    clicked = byClick(isElement(e.target) ? e.target : null)
+  }
 
   win.addEventListener('keydown', onKeyDown, true)
   win.addEventListener('keyup', onKeyUp, true)
+  win.addEventListener('focusin', onFocus, true)
   return () => {
     win.removeEventListener('keydown', onKeyDown, true)
     win.removeEventListener('keyup', onKeyUp, true)
+    win.removeEventListener('focusin', onFocus, true)
   }
 }
 

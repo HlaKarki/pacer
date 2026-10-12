@@ -75,6 +75,13 @@ describe('isReadingFocus', () => {
       expect([id, isReadingFocus($(`#${id}`))]).toEqual([id, false])
     }
   })
+
+  test('counts a focusable wrapper around the text as reading when a click focused it', () => {
+    document.body.insertAdjacentHTML('beforeend', '<div id="wrap" tabindex="0"><p>README text</p></div>')
+    expect(isReadingFocus($('#wrap'), true)).toBe(true)
+    expect(isReadingFocus($('#wrap'))).toBe(false)
+    expect(isReadingFocus($('#rb'), true)).toBe(false)
+  })
 })
 
 describe('deepFocus', () => {
@@ -113,6 +120,16 @@ describe('attachKeys', () => {
     press(document.body, 'ArrowDown')
     expect(calls).toEqual(['toggle', 'nextChunk', 'nextSentence', 'prevWord', 'prevSentence', 'wpm:25', 'wpm:-25'])
     expect(pageHeard).toEqual([])
+  })
+
+  test('takes the keys after a click on a focusable wrapper, and leaves them to it after a Tab', () => {
+    document.body.insertAdjacentHTML('beforeend', '<div id="wrap" tabindex="0"><p>README text</p></div>')
+    $('#wrap').dispatchEvent(new window.FocusEvent('focusin', { bubbles: true, composed: true }) as unknown as Event)
+    press($('#wrap'), ' ')
+    $('#wrap').focus()
+    press($('#wrap'), 'ArrowDown')
+    expect(calls).toEqual(['toggle'])
+    expect(pageHeard).toEqual(['keydown:ArrowDown', 'keyup:ArrowDown'])
   })
 
   test('moves back by sentence in sentence chunks', () => {
@@ -246,6 +263,15 @@ describe('attachClicks', () => {
   test('jumps to the clicked word', () => {
     click($('#text'))
     expect(jumps).toEqual([3])
+  })
+
+  test('jumps to a word inside a focusable wrapper', () => {
+    document.body.insertAdjacentHTML('beforeend', '<div id="wrap" tabindex="0"><p id="readme">README text</p></div>')
+    const text = $('#readme').firstChild!
+    words.set(text, 7)
+    caretOn(text)
+    click($('#readme'))
+    expect(jumps).toEqual([7])
   })
 
   test('ignores clicks on links, controls, Pacer’s bar, selections and modified clicks', () => {
