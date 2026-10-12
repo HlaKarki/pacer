@@ -513,6 +513,7 @@ export class InPageSession {
       return false
     }
     this.marks.show(range, map.toneOf(i), this.readRuns(i))
+    this.follow.alongLine(range)
     if (this.lineAt < 0 || !map.sameLine(this.lineAt, i)) {
       this.lineAt = i
       this.follow.toLine(range, this.checkCovered)

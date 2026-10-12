@@ -135,6 +135,41 @@ describe('Follow.toLine', () => {
   })
 })
 
+describe('Follow.alongLine', () => {
+  test('scrolls a code block sideways to show the chunk, and back for the start of the next line', () => {
+    document.body.innerHTML = '<pre id="code" style="overflow-x: auto"><code>const answer = computeSomething(firstArgument, secondArgument, thirdArgument)</code></pre>'
+    const pre = document.getElementById('code')!
+    Object.defineProperty(pre, 'scrollWidth', { value: 900, configurable: true })
+    Object.defineProperty(pre, 'clientWidth', { value: 300, configurable: true })
+    pre.getBoundingClientRect = () => ({ left: 100, right: 400, top: 0, bottom: 100, width: 300, height: 100 }) as DOMRect
+    const code = pre.querySelector('code')!.firstChild!
+    const box = (range: Range) => {
+      const left = 100 + range.startOffset * 10 - pre.scrollLeft
+      return { left, right: left + (range.endOffset - range.startOffset) * 10, top: 10, bottom: 30, width: 0, height: 20 } as DOMRect
+    }
+    RangeProto.getBoundingClientRect = function (this: Range) {
+      return box(this)
+    }
+    const word = (from: number, to: number) => {
+      const range = document.createRange()
+      range.setStart(code, from)
+      range.setEnd(code, to)
+      return range
+    }
+    const follow = Follow.attach(win, () => {})
+    follow.alongLine(word(6, 12))
+    expect(pre.scrollLeft).toBe(0)
+    const far = word(48, 62)
+    follow.alongLine(far)
+    expect(box(far).left).toBeGreaterThanOrEqual(100)
+    expect(box(far).right).toBeLessThanOrEqual(400)
+    follow.alongLine(word(0, 5))
+    expect(pre.scrollLeft).toBe(0)
+    follow.dispose()
+    delete (RangeProto as Partial<Range>).getBoundingClientRect
+  })
+})
+
 describe('Follow user scrolls', () => {
   test('reports wheel, touch, scrollbar presses and scroll keys but not zooms, typing or Pacer’s own bar', () => {
     document.body.innerHTML = '<p>Text</p><input><pacer-bar><button>Play</button></pacer-bar>'

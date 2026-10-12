@@ -4,6 +4,7 @@ import { scrollerOf } from './start'
 const BAND = 0.36
 const GLIDE_MS = 280
 const JUMP_VIEWPORTS = 1.5
+const SIDE_MARGIN = 16
 const SCROLL_KEYS = new Set(['PageUp', 'PageDown', 'Home', 'End'])
 const EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])'
 const OWN_HOST = /^pacer-/
@@ -31,6 +32,17 @@ export function inView(range: Range): boolean {
   const view = viewportOf(range.startContainer)
   const bottom = Math.min(view.top + view.height, range.startContainer.ownerDocument?.defaultView?.innerHeight ?? 0)
   return rect.bottom > Math.max(0, view.top) && rect.top < bottom
+}
+
+/** The nearest box that scrolls the node sideways, like a code block with long lines. */
+function sideScrollerOf(node: Node): Element | null {
+  const body = node.ownerDocument?.body
+  for (let el = node.parentElement; el && el !== body; el = el.parentElement) {
+    if (el.scrollWidth <= el.clientWidth) continue
+    const x = el.ownerDocument.defaultView?.getComputedStyle(el).overflowX
+    if (x === 'auto' || x === 'scroll') return el
+  }
+  return null
 }
 
 const fromPacer = (e: Event) => e.composedPath().some((node) => OWN_HOST.test((node as Element).localName ?? ''))
@@ -123,6 +135,18 @@ export class Follow {
       this.frame = this.win.requestAnimationFrame(t < 1 ? step : () => this.settle(el, onSettled))
     }
     this.frame = this.win.requestAnimationFrame(step)
+  }
+
+  /** Scrolls a sideways scroll box so the chunk shows inside it, back to the start for a new line. */
+  alongLine(range: Range): void {
+    const el = sideScrollerOf(range.startContainer)
+    if (!el) return
+    const rect = range.getBoundingClientRect()
+    const left = el.getBoundingClientRect().left + el.clientLeft
+    const right = left + el.clientWidth
+    if (rect.left >= left && rect.right <= right) return
+    const shift = rect.left < left || rect.width > el.clientWidth ? rect.left - left - SIDE_MARGIN : rect.right - right + SIDE_MARGIN
+    el.scrollTo({ left: Math.max(0, el.scrollLeft + shift), behavior: 'instant' })
   }
 
   cancel(): void {
