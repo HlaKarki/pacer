@@ -1,6 +1,6 @@
 import { WPM_STEP } from '../../src/lib/settings'
 import { extensionGone } from './lifecycle'
-import { EDITABLE, fromPacer } from './dom'
+import { EDITABLE, fromPacer, OWN_HOST } from './dom'
 import type { WordMap } from './map'
 import type { StopReason } from './session'
 
@@ -69,7 +69,7 @@ function focusWithin(el: Element | null): Element | null {
   return el
 }
 
-const shown = (doc: Document, selector: string) => [...doc.querySelectorAll(selector)].some((el) => el.checkVisibility())
+const shown = (doc: Document, selector: string) => [...doc.querySelectorAll(selector)].some((el) => !OWN_HOST.test(el.localName) && el.checkVisibility())
 
 // Wikipedia keeps some aria-expanded buttons open for good, so only focus inside an open control counts.
 const inOpenControl = (el: Element | null) => el?.closest('[aria-expanded="true"]') != null

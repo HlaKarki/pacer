@@ -174,7 +174,10 @@ function mountHost(doc: Document, name: string): { host: HTMLElement; root: Shad
   const sheet = new (doc.defaultView ?? window).CSSStyleSheet()
   sheet.replaceSync(CSS)
   root.adoptedStyleSheets = [sheet]
+  host.setAttribute('popover', 'manual')
   doc.documentElement.append(host)
+  // A transform or filter on the page's html carries fixed boxes off with the page, so lift the host into the top layer.
+  host.showPopover?.()
   return { host, root }
 }
 

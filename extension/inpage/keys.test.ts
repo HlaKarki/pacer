@@ -25,6 +25,19 @@ function press(target: EventTarget, key: string, init: KeyboardEventInit = {}) {
   return down
 }
 
+// happy-dom has no top layer, so stand Pacer's hosts in for what :popover-open finds while the bar shows.
+function ownHostsOpen(): () => void {
+  const hosts = ['pacer-bar', 'pacer-toast'].map((name) => document.documentElement.appendChild(document.createElement(name)))
+  const all = document.querySelectorAll
+  document.querySelectorAll = function (this: Document, selector: string) {
+    return selector.includes(':popover-open') ? hosts : all.call(this, selector)
+  } as typeof all
+  return () => {
+    document.querySelectorAll = all
+    hosts.forEach((host) => host.remove())
+  }
+}
+
 beforeEach(() => {
   document.body.innerHTML = `<article><p id="text">Some words to read on the page.</p>
     <input id="field"><div id="editor" contenteditable="true"><span id="inside">typed</span></div>
@@ -177,6 +190,14 @@ describe('attachKeys', () => {
     press(document.body, 'Escape')
     expect(calls).toEqual(['pause', 'stop:esc'])
     expect(pageHeard).toEqual([])
+  })
+
+  test('keeps the keys while Pacer’s own bar and toast sit in the top layer', () => {
+    const close = ownHostsOpen()
+    press(document.body, ' ')
+    press(document.body, 'Escape')
+    close()
+    expect(calls).toEqual(['toggle', 'pause'])
   })
 
   test('leaves Esc to an open dialog and to fields', () => {
@@ -389,6 +410,14 @@ describe('attachClicks', () => {
     document.body.insertAdjacentHTML('beforeend', '<div role="dialog">Cookies?</div><button aria-expanded="true">Contents</button>')
     pointerDown($('#text'))
     click($('#text'))
+    expect(jumps).toEqual([3])
+  })
+
+  test('jumps while Pacer’s own bar and toast sit in the top layer', () => {
+    const close = ownHostsOpen()
+    $('#text').dispatchEvent(new window.Event('pointerdown', { bubbles: true, composed: true }) as unknown as Event)
+    click($('#text'))
+    close()
     expect(jumps).toEqual([3])
   })
 

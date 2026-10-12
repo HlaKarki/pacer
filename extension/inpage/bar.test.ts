@@ -54,8 +54,21 @@ describe('Bar', () => {
     const css = [...roots[0].adoptedStyleSheets[0].cssRules].map((rule) => rule.cssText).join('\n')
     expect(css).toContain(':host')
     expect(css).toContain('all: initial !important')
+    expect(hosts[0].getAttribute('popover')).toBe('manual')
     bar.dispose()
     expect(document.documentElement.querySelector('pacer-bar')).toBeNull()
+  })
+
+  test('opens its host in the top layer where the browser has one', () => {
+    const opened: string[] = []
+    const showPopover = function (this: HTMLElement) {
+      opened.push(`${this.localName} ${this.isConnected}`)
+    }
+    Object.assign(HostProto, { showPopover })
+    Bar.mount(actions, document).dispose()
+    Toast.show('Pacer found no article text on this page.', document)
+    Reflect.deleteProperty(HostProto, 'showPopover')
+    expect(opened).toEqual(['pacer-bar true', 'pacer-toast true'])
   })
 
   test('waits for the first state with its controls dimmed', () => {
