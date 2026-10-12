@@ -1,5 +1,6 @@
 import { sourcedBlocksFromHtml, type HtmlOptions, type SourcedBlock } from '../../src/lib/import/html'
 import type { Doc } from '../../src/lib/text'
+import { toneOf, type Tone } from './marks'
 
 /** Below this share of mapped words, the reader tab reads the page better than the page itself. */
 export const MIN_COVERAGE = 0.85
@@ -228,6 +229,7 @@ export class WordMap {
   private firstWordOfNode: Int32Array | null = null
   private nodeIndex: Map<Node, number> | null = null
   private blockEls: (Element | null)[] = []
+  private blockTones: Tone[] = []
   private mappedEls: Set<Element> | null = null
 
   private constructor(layout: Layout) {
@@ -380,6 +382,17 @@ export class WordMap {
       this.blockEls[block] = el
     }
     return this.blockEls[block]
+  }
+
+  /** The tone of the block a word was found in, or 'light' when the page does not show it. */
+  toneOf(i: number): Tone {
+    const block = this.blockOf(i)
+    if (block < 0) return 'light'
+    if (this.blockTones[block] === undefined) {
+      const el = this.blockElement(block)
+      this.blockTones[block] = el ? toneOf(el) : 'light'
+    }
+    return this.blockTones[block]
   }
 
   /** True when the node sits in a block that had shown words, so a click there that missed is worth a fresh map. */

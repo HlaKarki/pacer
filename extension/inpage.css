@@ -1,0 +1,17 @@
+::highlight(pacer-now-light) {
+  color: #1b2126;
+  background-color: #fbe17a;
+}
+
+::highlight(pacer-now-dark) {
+  color: #e2e5e7;
+  background-color: #574812;
+}
+
+::highlight(pacer-read-light) {
+  color: #6b7072;
+}
+
+::highlight(pacer-read-dark) {
+  color: #848789;
+}
