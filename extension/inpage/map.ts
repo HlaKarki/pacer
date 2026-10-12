@@ -188,6 +188,26 @@ export function liveTokens(blocks: SourcedBlock[]): Tokens {
   return out
 }
 
+/** Breadcrumbs and menus often repeat the title above the article, so a Doc that opens with a heading takes the nearest page heading with exactly those words. */
+function placeOpeningHeading(doc: Doc, map: Int32Array, tokens: Tokens, blocks: SourcedBlock[]): void {
+  const opening = doc.paragraphs[0]
+  if (!opening?.heading) return
+  const { start, end } = opening
+  const n = end - start
+  let next = end
+  while (next < map.length && map[next] === -1) next++
+  const limit = next < map.length ? map[next] : tokens.texts.length
+  for (let j = limit - n; j >= 0; j--) {
+    const k = tokens.block[j]
+    if (!blocks[k].level || tokens.block[j - 1] === k || tokens.block[j + n] === k) continue
+    let d = 0
+    while (d < n && tokens.block[j + d] === k && tokens.texts[j + d] === doc.words[start + d].text) d++
+    if (d < n) continue
+    for (d = 0; d < n; d++) map[start + d] = j + d
+    return
+  }
+}
+
 function pieceAt(pieces: SourcedBlock['pieces'], at: number): number {
   let lo = 0
   let hi = pieces.length - 1
@@ -254,6 +274,7 @@ export class WordMap {
       doc.words.map((w) => w.text),
       tokens.texts,
     )
+    placeOpeningHeading(doc, map, tokens, blocks)
     const nodes: Text[] = []
     const base = new Int32Array(blocks.length)
     const blockNodes = new Int32Array(blocks.length * 2)

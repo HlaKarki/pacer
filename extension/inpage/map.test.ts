@@ -80,6 +80,20 @@ describe('WordMap', () => {
     expect(map.rangeOf(3, 7)?.toString()).toBe('Your eyes do not')
   })
 
+  test('puts the title on the page heading, not a breadcrumb or an intro that repeats it', () => {
+    const doc = parse('# CSS Custom Highlight API\n\n## Concepts and usage\n\nStyling text ranges on a webpage can be very useful.')
+    const map = WordMap.build(
+      doc,
+      page(`<div class="breadcrumbs"><ol><li>Web</li><li>CSS Custom Highlight API</li></ol></div>
+        <header><h1>CSS Custom Highlight API</h1><p>Baseline 2025</p></header>
+        <p>The CSS Custom Highlight API provides a mechanism.</p>
+        <article><h2>Concepts and usage</h2><p>Styling text ranges on a webpage can be very useful.</p></article>`),
+    )
+    const title = map.rangeOf(0, 4)
+    expect([title?.toString(), title?.startContainer.parentElement?.localName]).toEqual(['CSS Custom Highlight API', 'h1'])
+    expect(map.rangeOf(4, 5)?.startContainer.parentElement?.localName).toBe('h2')
+  })
+
   test('leaves out text the reader cannot see', () => {
     const doc = parse('Before the photo Advertisement. Continue reading after the photo the story goes on.')
     const map = WordMap.build(
