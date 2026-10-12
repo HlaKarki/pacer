@@ -99,7 +99,11 @@ beforeEach(() => {
   jest.useFakeTimers()
 })
 
+// Sessions listen on the shared window, so one a test left running would take the next test's keys.
+const sessions: InPageSession[] = []
+
 afterEach(() => {
+  for (const session of sessions.splice(0)) session.dispose()
   jest.useRealTimers()
   for (const name of ['getClientRects', 'getBoundingClientRect'] as const) delete (RangeProto as Partial<Range>)[name]
   for (const name of ['chrome', 'CSS', 'Highlight']) Reflect.deleteProperty(globalThis, name)
@@ -135,6 +139,7 @@ async function begin(options: SessionOptions = {}) {
   const { bar, mountBar } = fakeBar()
   let ended = 0
   const session = new InPageSession({ win, mountBar, ended: () => ended++, ...options })
+  sessions.push(session)
   let result: ToggleResult | undefined
   let failure: unknown
   session.start().then(
@@ -348,6 +353,25 @@ describe('InPageSession', () => {
     session.nextSentence()
     expect(nowPara()).toBe(3)
     session.dispose()
+  })
+
+  test('takes the reading keys and clicks only while it reads', async () => {
+    page()
+    const heard: string[] = []
+    const onPage = (e: Event) => void heard.push((e as KeyboardEvent).key)
+    document.addEventListener('keydown', onPage)
+    const { session } = await begin()
+    const space = () => document.body.dispatchEvent(new window.KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true }) as unknown as Event)
+    space()
+    expect(session.playing).toBe(false)
+    const target = document.querySelector('[data-para="3"]')!.firstChild!
+    document.caretPositionFromPoint = () => ({ offsetNode: target, offset: 0 }) as CaretPosition
+    document.querySelector('[data-para="3"]')!.dispatchEvent(new window.MouseEvent('click', { bubbles: true, button: 0 }) as unknown as Event)
+    expect([nowText(), nowPara()]).toEqual(['Paragraph', 3])
+    await session.stop('esc')
+    space()
+    expect(heard).toEqual([' '])
+    document.removeEventListener('keydown', onPage)
   })
 
   test('changes speed and chunk size through the shared settings', async () => {

@@ -8,6 +8,7 @@ import { extractArticle, HEADER_STRIP, matchParagraph, openingsAtTop, type Artic
 import { withoutHash } from '../pages'
 import { ExtensionStore, PAST_END, startFrom } from '../store'
 import { Follow, inView } from './follow'
+import { attachClicks, attachKeys } from './keys'
 import { MIN_COVERAGE, WordMap } from './map'
 import { Marks, type Tone, type ToneRun } from './marks'
 import { viewportStart } from './start'
@@ -109,6 +110,7 @@ export class InPageSession {
   private prefix: Float64Array = new Float64Array(1)
   private paced = { pauses: false, smart: false }
   private unsubscribe: () => void = nothing
+  private detachers: (() => void)[] = []
   private ready = false
   private disposed = false
   private isPlaying = false
@@ -148,6 +150,10 @@ export class InPageSession {
 
   get wordMap(): WordMap | null {
     return this.ready ? this.map : null
+  }
+
+  get bySentence(): boolean {
+    return this.store?.getSettings().chunk === 'sentence'
   }
 
   /** Throws ImportError when the page has no article. Disposes itself on every outcome but 'started'. */
@@ -194,6 +200,7 @@ export class InPageSession {
     this.marks = Marks.mount(page)
     this.follow = Follow.attach(win, this.onUserScroll)
     this.unsubscribe = store.subscribe(this.onSettings)
+    this.detachers = [attachKeys(win, this), attachClicks(page, this)]
     this.ready = true
     this.play()
     return { kind: 'started' }
@@ -364,6 +371,7 @@ export class InPageSession {
     this.isPlaying = false
     this.clearTimer()
     this.unsubscribe()
+    for (const detach of this.detachers) detach()
     if (this.ready) {
       this.follow.dispose()
       this.marks.dispose()
