@@ -386,7 +386,7 @@ export class Bar implements BarView {
     this.shortcutList = element(doc, 'dl', 'shortcuts')
     this.settings.append(this.chunkChoice.row, this.smartChoice.row, this.pausesChoice.row, this.autoStartChoice.row, this.shortcutList)
 
-    panel.append(this.play, wpm, middle, this.chunk, this.settingsButton, openTab, close, this.settings)
+    panel.append(this.play, wpm, middle, this.chunk, this.settingsButton, this.settings, openTab, close)
     // Keys typed with focus inside the bar never reach Pacer's page keys, so Esc closes the panel here too.
     panel.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || this.settings.hidden) return

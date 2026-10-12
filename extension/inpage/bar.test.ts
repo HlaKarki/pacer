@@ -191,6 +191,7 @@ describe('Bar', () => {
       target.dispatchEvent(new window.PointerEvent('pointerdown', { bubbles: true, composed: true }) as unknown as Event)
     expect([settings.hidden, settings.getAttribute('role'), toggle.getAttribute('aria-expanded')]).toEqual([true, 'dialog', 'false'])
     expect(settings.parentElement).toBe(inBar('.panel'))
+    expect(toggle.nextElementSibling).toBe(settings)
     toggle.click()
     expect([settings.hidden, toggle.getAttribute('aria-expanded')]).toEqual([false, 'true'])
     pointerDown(radio('Smart pacing', 'Off'))
