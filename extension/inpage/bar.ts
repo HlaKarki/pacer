@@ -405,6 +405,10 @@ export class Bar implements BarView {
     return new Bar(actions, doc)
   }
 
+  get settingsOpen(): boolean {
+    return !this.settings.hidden
+  }
+
   render(state: BarState): void {
     // Cookie banners and the like come and go after the page loads, so look again now and then.
     if (performance.now() - this.placedAt >= PLACE_MS) this.place()

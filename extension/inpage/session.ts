@@ -64,6 +64,7 @@ export interface LineBox {
 }
 
 export interface BarView {
+  readonly settingsOpen: boolean
   render(state: BarState): void
   notice(text: string, action?: NoticeAction): void
   keepClear(line: LineBox | null): void
@@ -97,6 +98,7 @@ const ARMED: Notice = { text: 'Press Space or Play to start' }
 const FINGERPRINT_WORDS = 50
 
 const NO_BAR: BarView = {
+  settingsOpen: false,
   render: () => undefined,
   notice: () => undefined,
   keepClear: () => undefined,
@@ -193,6 +195,10 @@ export class InPageSession {
 
   get bySentence(): boolean {
     return this.store?.getSettings().chunk === 'sentence'
+  }
+
+  get settingsOpen(): boolean {
+    return this.bar.settingsOpen
   }
 
   /** Throws ImportError when the page has no article. Disposes itself on every outcome but 'started'. */

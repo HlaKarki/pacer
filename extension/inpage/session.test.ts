@@ -135,6 +135,9 @@ function fakeBar() {
   const mountBar = (actions: BarActions) => {
     bar.actions = actions
     return {
+      get settingsOpen() {
+        return bar.settingsOpen
+      },
       render: (state: BarState) => void bar.states.push(state),
       notice: (text: string) => void bar.notices.push(text),
       keepClear: (line: LineBox | null) => void bar.lines.push(line),
@@ -239,6 +242,24 @@ describe('InPageSession', () => {
     expect([nowText(), nowPara(), click.session.playing]).toEqual(['Paragraph', 7, true])
     expect(lastState(click.bar).notice).toBeNull()
     click.session.dispose()
+  })
+
+  test('only closes the bar settings on a click on a word while armed', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, bar } = await begin()
+    bar.settingsOpen = true
+    const target = document.querySelector('[data-para="7"]')!.firstChild!
+    document.caretPositionFromPoint = () => ({ offsetNode: target, offset: 0 }) as CaretPosition
+    const word = document.createRange()
+    word.setStart(target, 0)
+    const { left, top } = word.getClientRects()[0]
+    const para7 = document.querySelector('[data-para="7"]')!
+    para7.dispatchEvent(new window.PointerEvent('pointerdown', { bubbles: true, clientX: left + 1, clientY: top + 1 }) as unknown as Event)
+    bar.settingsOpen = false
+    para7.dispatchEvent(new window.MouseEvent('click', { bubbles: true, button: 0, clientX: left + 1, clientY: top + 1 }) as unknown as Event)
+    expect([nowText(), nowPara(), session.playing, lastState(bar).notice]).toEqual(['Paragraph', 6, false, ARMED])
+    session.dispose()
   })
 
   test('plays on the press with Start on press, and on Read on', async () => {

@@ -302,6 +302,7 @@ describe('attachClicks', () => {
   let rebuilds: number
   let owns: boolean
   let stale: boolean
+  let settingsOpen: boolean
   let words: Map<Node, number>
   let map: WordMap
   let stop: () => void
@@ -319,6 +320,7 @@ describe('attachClicks', () => {
     rebuilds = 0
     owns = true
     stale = false
+    settingsOpen = false
     rebuilt = () => undefined
     rects = [{ left: 0, top: 0, right: 40, bottom: 20 }]
     const text = $('#text').firstChild!
@@ -337,6 +339,9 @@ describe('attachClicks', () => {
       },
       get mapStale() {
         return stale
+      },
+      get settingsOpen() {
+        return settingsOpen
       },
       pick: (i) => void jumps.push(i),
       rebuildMap: () => {
@@ -424,6 +429,18 @@ describe('attachClicks', () => {
     expect(jumps).toEqual([])
     document.body.insertAdjacentHTML('beforeend', '<div role="dialog">Cookies?</div><button aria-expanded="true">Contents</button>')
     pointerDown($('#text'))
+    click($('#text'))
+    expect(jumps).toEqual([3])
+  })
+
+  test('ignores the click that closes the bar settings panel', () => {
+    const pointerDown = () => $('#text').dispatchEvent(new window.Event('pointerdown', { bubbles: true, composed: true }) as unknown as Event)
+    settingsOpen = true
+    pointerDown()
+    settingsOpen = false
+    click($('#text'))
+    expect(jumps).toEqual([])
+    pointerDown()
     click($('#text'))
     expect(jumps).toEqual([3])
   })
