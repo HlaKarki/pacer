@@ -10,9 +10,10 @@ import {
   SlidersHorizontal,
   TableOfContents,
 } from 'lucide-react'
-import { chunkAt, sectionAt, sentenceStart, type Doc } from '../lib/text'
-import { chunkMs, formatDuration, msPerWord, rampFactor } from '../lib/timing'
-import { WPM_MAX, WPM_MIN, WPM_STEP, type Settings } from '../lib/storage'
+import { chunkAt, sectionAt, type Doc } from '../lib/text'
+import { chunkMs, formatDuration, msPerWord } from '../lib/timing'
+import { WPM_STEP, type Settings } from '../lib/storage'
+import { chunkDelayMs, clampWpm, nextSentenceTarget, prevSentenceTarget } from '../lib/transport'
 import { FlowView } from './FlowView'
 import { FocusView } from './FocusView'
 import { SettingsPanel } from './SettingsPanel'
@@ -33,8 +34,6 @@ interface ReaderProps {
   keyTarget?: EventTarget
   showTheme?: boolean
 }
-
-const clampWpm = (wpm: number) => Math.min(WPM_MAX, Math.max(WPM_MIN, wpm))
 
 // Keeps a button from taking focus on click, so Space keeps meaning play/pause.
 const noFocus = (e: React.MouseEvent) => e.preventDefault()
@@ -86,9 +85,9 @@ export function Reader({
       sincePlay.current += 1
       if (chunk.end >= total) setPlaying(false)
       else setIndex(chunk.end)
-    }, duration * (bySentence ? 1 : rampFactor(sincePlay.current)))
+    }, chunkDelayMs(prefix, chunk, settings.wpm, settings.chunk, sincePlay.current))
     return () => window.clearTimeout(timer)
-  }, [playing, chunk, duration, total, setIndex, bySentence])
+  }, [playing, chunk, prefix, settings.wpm, settings.chunk, total, setIndex])
 
   const play = useCallback(() => {
     if (chunk.end >= total) setIndex(0)
@@ -106,18 +105,9 @@ export function Reader({
     [total, setIndex],
   )
 
-  const prevSentence = useCallback(() => {
-    const start = sentenceStart(doc, index)
-    // Like a music player, the first press restarts the sentence and a second press goes back one.
-    const grace = playing ? 3 : 1
-    if (index - start >= grace) jump(start)
-    else jump(sentenceStart(doc, Math.max(0, start - 1)))
-  }, [doc, index, playing, jump])
+  const prevSentence = useCallback(() => jump(prevSentenceTarget(doc, index, playing)), [doc, index, playing, jump])
 
-  const nextSentence = useCallback(() => {
-    const next = doc.sentences[doc.words[index].sent + 1]
-    jump(next ? next.start : total - 1)
-  }, [doc, index, total, jump])
+  const nextSentence = useCallback(() => jump(nextSentenceTarget(doc, index)), [doc, index, jump])
 
   const setWpm = useCallback((wpm: number) => update({ wpm: clampWpm(wpm) }), [update])
 
