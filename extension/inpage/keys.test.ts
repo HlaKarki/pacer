@@ -102,6 +102,14 @@ describe('isReadingFocus', () => {
     expect(isReadingFocus($('#wrap'))).toBe(false)
     expect(isReadingFocus($('#rb'), true)).toBe(false)
   })
+
+  test('counts a link as reading when a click focused it, since Space on a link only scrolls', () => {
+    document.body.insertAdjacentHTML('beforeend', '<a id="lnk" href="#s2">Section two</a><a id="rlnk" href="#" role="button">Menu</a>')
+    expect(isReadingFocus($('#lnk'), true)).toBe(true)
+    expect(isReadingFocus($('#lnk'))).toBe(false)
+    expect(isReadingFocus($('#rlnk'), true)).toBe(false)
+    expect(isReadingFocus($('#sum'), true)).toBe(false)
+  })
 })
 
 describe('deepFocus', () => {
@@ -150,6 +158,16 @@ describe('attachKeys', () => {
     press($('#wrap'), 'ArrowDown')
     expect(calls).toEqual(['toggle'])
     expect(pageHeard).toEqual(['keydown:ArrowDown', 'keyup:ArrowDown'])
+  })
+
+  test('takes the keys after a click on a link, and leaves them to it after a Tab', () => {
+    document.body.insertAdjacentHTML('beforeend', '<a id="lnk" href="#s2">Section two</a>')
+    $('#lnk').dispatchEvent(new window.FocusEvent('focusin', { bubbles: true, composed: true }) as unknown as Event)
+    press($('#lnk'), ' ')
+    $('#lnk').focus()
+    press($('#lnk'), ' ')
+    expect(calls).toEqual(['toggle'])
+    expect(pageHeard).toEqual(['keydown: ', 'keyup: '])
   })
 
   test('moves back by sentence in sentence chunks', () => {

@@ -7,6 +7,7 @@ import type { StopReason } from './session'
 const ROLES = 'button link tab slider listbox menu menuitem tree grid combobox radio checkbox switch option spinbutton'
 const CONTROLS = ['a[href]', 'button', 'summary', 'video', 'audio', ...ROLES.split(' ').map((role) => `[role=${role}]`)].join(', ')
 const FOCUSABLE = '[tabindex]:not([tabindex="-1"])'
+const PLAIN_LINK = 'a[href]:not([role])'
 const CLICKABLE = `${CONTROLS}, ${EDITABLE}, label`
 const OVERLAY = 'dialog[open], [aria-modal="true"], :popover-open, [role=dialog], [role=alertdialog], [role=menu], [role=listbox]'
 const MODAL = 'dialog:modal, [aria-modal="true"]'
@@ -43,12 +44,14 @@ const isElement = (node: unknown): node is Element => (node as Node | null)?.nod
 
 const editable = (el: Element) => el.matches(EDITABLE) || (el as HTMLElement).isContentEditable === true
 
-/** True when focus is on the page or its text, so Space and the arrows belong to Pacer there. A box a click focused counts as text. */
+/** True when focus is on the page or its text, so Space and the arrows belong to Pacer there. A box or a plain link a click focused counts as text. */
 export function isReadingFocus(el: Element | null, clicked = false): boolean {
   if (!el) return true
   const doc = el.ownerDocument
   if (el === doc.body || el === doc.documentElement) return true
-  if (editable(el) || el.matches(CONTROLS)) return false
+  if (editable(el)) return false
+  // Space on a link only scrolls the page, so a link a click left focused, like a contents link, leaves the keys to Pacer.
+  if (el.matches(CONTROLS)) return clicked && el.matches(PLAIN_LINK)
   // GitHub makes the whole README focusable, so only a box the keyboard focused keeps the keys from Pacer.
   return clicked || !el.matches(FOCUSABLE)
 }
