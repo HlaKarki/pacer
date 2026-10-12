@@ -113,6 +113,16 @@ describe('ExtensionStore', () => {
     warn.mockRestore()
   })
 
+  test('leaves Start on press off for settings saved before it existed, and keeps it once set', async () => {
+    data.settings = { wpm: 400, chunk: 2 }
+    const store = await ExtensionStore.load()
+    expect(store.getSettings()).toMatchObject({ wpm: 400, chunk: 2, autoStart: false })
+    store.updateSettings({ autoStart: true })
+    await Promise.resolve()
+    expect(data.settings).toEqual({ wpm: 400, chunk: 2, autoStart: true })
+    expect((await ExtensionStore.load()).getSettings().autoStart).toBe(true)
+  })
+
   test('follows settings changed in another tab until disposed', async () => {
     const store = await ExtensionStore.load()
     const send = (wpm: number) => {

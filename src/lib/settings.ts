@@ -12,6 +12,7 @@ export interface Settings {
   mode: Mode
   theme: Theme
   size: TextSize
+  autoStart: boolean
 }
 
 /** Settings kept outside the page, so every reader the host opens shares them. */
@@ -29,6 +30,7 @@ export const DEFAULT_SETTINGS: Settings = {
   mode: 'flow',
   theme: 'system',
   size: 'm',
+  autoStart: false,
 }
 
 export const WPM_MIN = 100
