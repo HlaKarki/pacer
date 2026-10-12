@@ -22,12 +22,32 @@ export const HEADER_STRIP = 0.15
 export const opening = (text: string) =>
   text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').slice(0, OPENING_WORDS).join(' ')
 
+const SIDEBARS = 'nav, aside, [role=navigation], [role=complementary]'
+
+function pinnedTest(doc: Document): (el: Element) => boolean {
+  const cache = new Map<Element, boolean>()
+  const pinned = (el: Element | null): boolean => {
+    if (!el || el === doc.body || el === doc.documentElement) return false
+    let hit = cache.get(el)
+    if (hit === undefined) {
+      const position = doc.defaultView?.getComputedStyle(el).position
+      hit = position === 'sticky' || position === 'fixed' || pinned(el.parentElement)
+      cache.set(el, hit)
+    }
+    return hit
+  }
+  return pinned
+}
+
 /** Openings of the text blocks in view, skipping the strip above `below` that a sticky header usually covers. */
 export function openingsAtTop(doc: Document, below: number): string[] {
   const out: string[] = []
+  const pinned = pinnedTest(doc)
   for (const el of doc.body?.querySelectorAll(CANDIDATES) ?? []) {
     const rect = el.getBoundingClientRect()
     if (rect.height === 0 || rect.bottom <= below) continue
+    // A sticky contents list stays in view wherever the reader is, so it would win every time.
+    if (el.closest(SIDEBARS) || pinned(el)) continue
     const key = opening(el.textContent ?? '')
     if (key) out.push(key)
     if (out.length >= MAX_OPENINGS) break

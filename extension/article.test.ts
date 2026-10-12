@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { Window } from 'happy-dom'
 import { parse } from '../src/lib/text'
-import { extractArticle, matchParagraph, opening, revealOpening, siteless } from './article'
+import { extractArticle, matchParagraph, opening, openingsAtTop, revealOpening, siteless } from './article'
 
 const window = new Window()
 globalThis.Node = window.Node as unknown as typeof Node
@@ -132,5 +132,42 @@ describe('revealOpening', () => {
     expect(revealOpening(doc, win, opening('Nothing on this page starts like this'), 100)).toBeNull()
     expect(revealOpening(doc, win, '', 100)).toBeNull()
     expect(win.scrollY).toBe(0)
+  })
+})
+
+describe('openingsAtTop', () => {
+  // happy-dom has no layout, so every candidate gets a rect that sits below the header strip.
+  function shown(body: string) {
+    const doc = window.document as unknown as Document
+    doc.body.innerHTML = body
+    for (const el of doc.body.querySelectorAll('*')) {
+      el.getBoundingClientRect = () => ({ top: 200, bottom: 240, height: 40 }) as DOMRect
+    }
+    return doc
+  }
+
+  const contents = (attrs: string) =>
+    `<div ${attrs}><ul><li>Background</li><li>Course of the war</li><li>Aftermath</li></ul></div>`
+
+  test('skips a sticky contents list that sits beside the article', () => {
+    const doc = shown(`${contents('style="position: sticky; top: 0"')}<article>${para(20)}${para(21)}</article>`)
+    expect(openingsAtTop(doc, 100)).toEqual([opening(para(20).slice(3)), opening(para(21).slice(3))])
+  })
+
+  test('skips text inside a fixed box, however deep', () => {
+    const doc = shown(`<div style="position: fixed"><div><p>Subscribe for one dollar a week.</p></div></div>${para(4)}`)
+    expect(openingsAtTop(doc, 100)).toEqual([opening(para(4).slice(3))])
+  })
+
+  test('skips navigation and complementary sidebars', () => {
+    const doc = shown(
+      `<aside><p>Related posts you might like</p></aside>${contents('role="navigation"')}${contents('role="complementary"')}${para(7)}`,
+    )
+    expect(openingsAtTop(doc, 100)).toEqual([opening(para(7).slice(3))])
+  })
+
+  test('keeps a header inside the article', () => {
+    const doc = shown(`<article><header><h1>How Eyes Read</h1></header>${para(1)}</article>`)
+    expect(openingsAtTop(doc, 100)).toEqual([opening('How Eyes Read'), opening(para(1).slice(3))])
   })
 })
