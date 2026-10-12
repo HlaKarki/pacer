@@ -266,6 +266,21 @@ describe('InPageSession', () => {
     expect(await stopped.session.stop('esc')).toEqual({ index: doc.paragraphs[9].start, from: 9 })
   })
 
+  test('moves to a clicked word without starting when the reading is paused', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, bar } = await begin(PLAY)
+    session.pause()
+    const target = document.querySelector('[data-para="7"]')!.firstChild!
+    document.caretPositionFromPoint = () => ({ offsetNode: target, offset: 0 }) as CaretPosition
+    const word = document.createRange()
+    word.setStart(target, 0)
+    const { left, top } = word.getClientRects()[0]
+    document.querySelector('[data-para="7"]')!.dispatchEvent(new window.MouseEvent('click', { bubbles: true, button: 0, clientX: left + 1, clientY: top + 1 }) as unknown as Event)
+    expect([nowText(), nowPara(), session.playing, lastState(bar).playing]).toEqual(['Paragraph', 7, false, false])
+    session.dispose()
+  })
+
   test('only closes the bar settings on a click on a word while armed', async () => {
     page()
     root.scrollTop = 1000
