@@ -1,0 +1,39 @@
+.workspace-leaf-content[data-type='pacer'] .view-content {
+  padding: 0;
+  overflow: hidden;
+}
+
+.pc-root {
+  --pc-paper: var(--background-primary);
+  --pc-paper-raised: var(--background-primary);
+  --pc-ink: var(--text-normal);
+  --pc-ink-soft: color-mix(in oklab, var(--text-normal) 60%, var(--text-muted));
+  --pc-muted: var(--text-muted);
+  --pc-rule: var(--background-modifier-border);
+  --pc-marker: var(--text-highlight-bg, color-mix(in oklch, var(--color-yellow) 40%, transparent));
+  --pc-accent: var(--interactive-accent);
+  --pc-accent-ink: var(--text-on-accent);
+  --pc-read: color-mix(in oklab, var(--text-normal) 58%, var(--background-primary));
+  --pc-shadow: rgba(24, 34, 44, 0.16);
+  --pc-danger: var(--text-error);
+  --pc-font-read: var(--font-text);
+  --pc-font-ui: var(--font-interface);
+  height: 100%;
+  outline: none;
+}
+
+.theme-dark .pc-root {
+  --pc-paper-raised: var(--background-secondary);
+  --pc-shadow: rgba(0, 0, 0, 0.5);
+}
+
+.pc-root .pc-message {
+  margin: 0;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--pc-muted);
+}
+
+.pc-root .pc-message[data-error] {
+  color: var(--pc-danger);
+}

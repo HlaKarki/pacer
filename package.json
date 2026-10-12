@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "bun test"
+    "test": "bun test",
+    "build:obsidian": "bun scripts/build-obsidian.ts",
+    "install:obsidian": "bun scripts/install-obsidian.ts"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",
@@ -24,6 +26,8 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "happy-dom": "^21.0.1",
+    "obsidian": "^1.14.4",
     "oxlint": "^1.81.0",
     "subtlex-word-frequencies": "^2.0.0",
     "typescript": "~6.0.2",

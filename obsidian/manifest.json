@@ -1,0 +1,9 @@
+{
+  "id": "pacer",
+  "name": "Pacer",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Read notes, PDFs and EPUBs with a highlighter that moves at your pace while the words around it stay on the page.",
+  "author": "Hla Htun",
+  "isDesktopOnly": false
+}
