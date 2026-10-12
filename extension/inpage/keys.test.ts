@@ -44,7 +44,7 @@ beforeEach(() => {
     prevSentence: record('prevSentence'),
     nextSentence: record('nextSentence'),
     nudgeWpm: (delta) => void calls.push(`wpm:${delta}`),
-    abandon: record('abandon'),
+    dispose: record('dispose'),
   }
   Object.assign(globalThis, { chrome: { runtime: { id: 'pacer' } } })
   document.addEventListener('keydown', onPage)
@@ -187,7 +187,7 @@ describe('attachKeys', () => {
     Object.assign(globalThis, { chrome: { runtime: {} } })
     const down = press(document.body, ' ')
     expect(down.defaultPrevented).toBe(false)
-    expect(calls).toEqual(['abandon'])
+    expect(calls).toEqual(['dispose'])
     expect(pageHeard).toEqual(['keydown: ', 'keyup: '])
   })
 

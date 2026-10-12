@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, jest, spyOn, test } from 'bun:test'
 import { parse } from '../src/lib/text'
 import { ExtensionStore, startFrom } from './store'
 
@@ -47,6 +47,7 @@ describe('ExtensionStore', () => {
     listeners = new Set()
     Object.assign(globalThis, {
       chrome: {
+        runtime: { id: 'pacer' },
         storage: {
           local: {
             get: async (key: string) => ({ [key]: data[key] }),
@@ -100,13 +101,16 @@ describe('ExtensionStore', () => {
     expect(await store.place('a')).toEqual(place(3))
   })
 
-  test('drop forgets the pending save', async () => {
+  test('drops pending places without a write once the extension has reloaded', async () => {
     const store = await ExtensionStore.load()
+    const warn = spyOn(console, 'warn')
     store.setPlace('a', place(4))
-    store.drop()
-    jest.advanceTimersByTime(2000)
+    ;(globalThis as unknown as { chrome: { runtime: { id?: string } } }).chrome.runtime.id = undefined
+    jest.advanceTimersByTime(1000)
     await store.flush()
     expect(writes).toEqual([])
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
   })
 
   test('follows settings changed in another tab until disposed', async () => {

@@ -88,17 +88,14 @@ export class ExtensionStore implements SettingsStore {
     this.timer ??= setTimeout(() => void this.flush(), SAVE_DELAY_MS)
   }
 
-  /** Forgets places not yet written, for a copy of Pacer whose storage went away with an extension reload. */
-  drop() {
-    if (this.timer !== null) clearTimeout(this.timer)
-    this.timer = null
-    this.pending.clear()
-  }
-
   async flush(): Promise<void> {
     if (this.timer !== null) clearTimeout(this.timer)
     this.timer = null
-    if (!this.pending.size) return
+    // A copy of Pacer left on a page by an extension reload has lost its storage, so it drops the places.
+    if (!this.pending.size || !chrome.runtime?.id) {
+      this.pending.clear()
+      return
+    }
     const entries = Object.fromEntries([...this.pending].map(([key, place]) => [placeKey(key), place]))
     this.pending.clear()
     try {

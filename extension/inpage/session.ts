@@ -394,12 +394,6 @@ export class InPageSession {
     return { index, from }
   }
 
-  /** Leaves without saving, for a copy of Pacer whose storage went away with an extension reload. */
-  abandon(): void {
-    this.store?.drop()
-    this.dispose()
-  }
-
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
@@ -440,7 +434,7 @@ export class InPageSession {
 
   private run(dir: 1 | -1) {
     if (extensionGone()) {
-      this.abandon()
+      this.dispose()
       return
     }
     try {
