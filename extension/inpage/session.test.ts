@@ -552,7 +552,11 @@ describe('InPageSession', () => {
     expect(session.playing).toBe(false)
     const target = document.querySelector('[data-para="3"]')!.firstChild!
     document.caretPositionFromPoint = () => ({ offsetNode: target, offset: 0 }) as CaretPosition
-    document.querySelector('[data-para="3"]')!.dispatchEvent(new window.MouseEvent('click', { bubbles: true, button: 0 }) as unknown as Event)
+    const word = document.createRange()
+    word.setStart(target, 0)
+    const { left, top } = word.getClientRects()[0]
+    const click = new window.MouseEvent('click', { bubbles: true, button: 0, clientX: left + 1, clientY: top + 1 })
+    document.querySelector('[data-para="3"]')!.dispatchEvent(click as unknown as Event)
     expect([nowText(), nowPara()]).toEqual(['Paragraph', 3])
     await session.stop('esc')
     space()

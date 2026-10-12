@@ -256,6 +256,7 @@ describe('attachClicks', () => {
   let map: WordMap
   let stop: () => void
   let rebuilt: () => void
+  let rects: { left: number; top: number; right: number; bottom: number }[]
 
   const caretOn = (node: Node, offset = 0) => {
     document.caretPositionFromPoint = () => ({ offsetNode: node, offset }) as CaretPosition
@@ -268,10 +269,16 @@ describe('attachClicks', () => {
     rebuilds = 0
     owns = true
     rebuilt = () => undefined
+    rects = [{ left: 0, top: 0, right: 40, bottom: 20 }]
     const text = $('#text').firstChild!
     words = new Map([[text, 3]])
     const fake = (canRebuild: boolean) =>
-      ({ wordAt: (node: Node) => words.get(node) ?? -1, owns: () => owns, canRebuild: () => canRebuild }) as unknown as WordMap
+      ({
+        wordAt: (node: Node) => words.get(node) ?? -1,
+        rangeOf: () => ({ getClientRects: () => rects }),
+        owns: () => owns,
+        canRebuild: () => canRebuild,
+      }) as unknown as WordMap
     map = fake(true)
     const target: ClickTarget = {
       get wordMap() {
@@ -335,6 +342,36 @@ describe('attachClicks', () => {
     caretOn(other)
     click($('#text'))
     expect([rebuilds, jumps]).toEqual([1, [9]])
+  })
+
+  test('ignores a click beside the word nearest to it', () => {
+    rects = [{ left: 100, top: 300, right: 160, bottom: 320 }]
+    click($('#text'), { clientX: 400, clientY: 310 })
+    click($('#text'), { clientX: 130, clientY: 290 })
+    expect(jumps).toEqual([])
+    click($('#text'), { clientX: 130, clientY: 310 })
+    expect(jumps).toEqual([3])
+  })
+
+  test('ignores the click that closes a page menu, popup or modal', () => {
+    const pointerDown = (target: Element) => target.dispatchEvent(new window.Event('pointerdown', { bubbles: true, composed: true }) as unknown as Event)
+    const closingClick = () => {
+      pointerDown($('#text'))
+      document.querySelector('[data-open]')?.remove()
+      click($('#text'))
+    }
+    document.body.insertAdjacentHTML('beforeend', '<ul data-open role="menu"><li role="menuitem">One</li></ul>')
+    closingClick()
+    document.body.insertAdjacentHTML('beforeend', '<div data-open role="dialog" aria-modal="true"><img alt="Photo"></div>')
+    closingClick()
+    document.body.insertAdjacentHTML('beforeend', '<button id="opener" data-open aria-expanded="true">HTML</button>')
+    $('#opener').focus()
+    closingClick()
+    expect(jumps).toEqual([])
+    document.body.insertAdjacentHTML('beforeend', '<div role="dialog">Cookies?</div><button aria-expanded="true">Contents</button>')
+    pointerDown($('#text'))
+    click($('#text'))
+    expect(jumps).toEqual([3])
   })
 
   test('does not map again for a click outside the article', () => {
