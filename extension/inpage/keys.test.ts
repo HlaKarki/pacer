@@ -323,7 +323,7 @@ describe('attachClicks', () => {
       get mapStale() {
         return stale
       },
-      jump: (i) => void jumps.push(i),
+      pick: (i) => void jumps.push(i),
       rebuildMap: () => {
         rebuilds++
         rebuilt()

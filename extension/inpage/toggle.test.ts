@@ -84,6 +84,7 @@ describe('createInPage', () => {
     await tick()
     expect(made.length).toBe(1)
     expect(made[0].options.win).toBe(win)
+    expect(made[0].options.autoplay).toBe(false)
     made[0].finish({ kind: 'started' })
     expect(await started).toEqual({ kind: 'started' })
     expect(await page.toggle()).toEqual({ kind: 'stopped' })
@@ -220,7 +221,7 @@ describe('Open in tab', () => {
 })
 
 describe('Read on', () => {
-  test('stops the finished session and starts again, telling the new one what it finished', async () => {
+  test('stops the finished session and starts again playing, telling the new one what it finished', async () => {
     const page = createInPage(win, fakeSession)
     const first = await started(page)
     first.options.readOn!()
@@ -228,6 +229,7 @@ describe('Read on', () => {
     expect(first.stops).toEqual(['close'])
     expect(made.length).toBe(2)
     expect(made[1].options.after).toBe('fingerprint 0')
+    expect(made[1].options.autoplay).toBe(true)
     expect(await page.toggle()).toEqual({ kind: 'busy' })
     made[1].finish({ kind: 'started' })
     await tick()

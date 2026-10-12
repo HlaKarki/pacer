@@ -59,11 +59,12 @@ export function createInPage(
     if (result.kind === 'fallback' && !(await askForTab(result.article))) Toast.show(NO_TAB, win.document)
   }
 
-  function begin(after?: string): Promise<ToggleResult> {
+  function begin(after?: string, autoplay = false): Promise<ToggleResult> {
     removeForeign(win.document)
     const next = makeSession({
       win,
       after,
+      autoplay,
       openTab: () => void openTab(next),
       readOn: () => void readOn(next),
       ended: () => {
@@ -80,7 +81,7 @@ export function createInPage(
       // A stopped session has no fingerprint, so take it before the stop.
       const after = previous?.fingerprint ?? undefined
       await previous?.stop('close')
-      return await begin(after)
+      return await begin(after, previous !== undefined)
     } catch (error) {
       session = null
       if (!(error instanceof ImportError)) console.error(error)

@@ -73,6 +73,8 @@ export interface SessionOptions {
   readOn?: () => void
   /** The fingerprint of the Doc that Read on came from, so the same Doc again waits at its end. */
   after?: string
+  /** Plays at once instead of waiting for Space, Play or a click on a word, as Read on does. */
+  autoplay?: boolean
   /** Runs once when the session goes, however it went, so its owner can let it go. */
   ended?: () => void
 }
@@ -85,6 +87,7 @@ const FAILED: Notice = { text: 'Pacer could not keep reading here', action: 'ope
 const CHANGED: Notice = { text: 'This page changed', action: 'openTab' }
 const END: Notice = { text: 'End of the page', action: 'readOn' }
 const NOTHING_NEW: Notice = { text: "That's the end of this page" }
+const ARMED: Notice = { text: 'Press Space or Play to start' }
 const FINGERPRINT_WORDS = 50
 
 const NO_BAR: BarView = {
@@ -114,8 +117,9 @@ interface Run {
 export class InPageSession {
   readonly key: string
   private readonly win: Window
-  private readonly options: Required<Omit<SessionOptions, 'win' | 'after'>>
+  private readonly options: Required<Omit<SessionOptions, 'win' | 'after' | 'autoplay'>>
   private readonly after: string | null
+  private readonly autoplay: boolean
   private bar: BarView = NO_BAR
   private store: ExtensionStore | null = null
   private source: Article | null = null
@@ -131,6 +135,7 @@ export class InPageSession {
   private ready = false
   private disposed = false
   private isPlaying = false
+  private armed = false
   private finished = false
   private index = 0
   private from = 0
@@ -155,6 +160,7 @@ export class InPageSession {
       ended: options.ended ?? nothing,
     }
     this.after = options.after ?? null
+    this.autoplay = options.autoplay ?? false
   }
 
   get playing(): boolean {
@@ -236,7 +242,8 @@ export class InPageSession {
     ]
     this.ready = true
     if (again) this.waitAtEnd()
-    else this.play()
+    else if (this.autoplay || store.getSettings().autoStart) this.play()
+    else this.arm()
     return { kind: 'started' }
   }
 
@@ -319,6 +326,7 @@ export class InPageSession {
       }
     }
     this.isPlaying = true
+    this.armed = false
     this.notice = null
     this.sincePlay = 0
     this.lineAt = -1
@@ -337,6 +345,13 @@ export class InPageSession {
   toggle(): void {
     if (this.isPlaying) this.pause()
     else this.play()
+  }
+
+  /** Moves to a clicked word, and starts reading there when the press is still waiting to start. */
+  pick(i: number): void {
+    const start = this.armed
+    this.jump(i)
+    if (start) this.play()
   }
 
   /** Moves to word i, or the nearest word the page shows in the direction of travel. */
@@ -485,6 +500,13 @@ export class InPageSession {
     this.pause(END)
   }
 
+  /** Highlights where reading will start and waits for Space, Play or a click on a word. */
+  private arm() {
+    this.armed = true
+    this.notice = ARMED
+    this.run(1)
+  }
+
   private waitAtEnd() {
     this.run(1)
     this.finished = true
@@ -529,7 +551,11 @@ export class InPageSession {
     }
     this.marks.show(range, map.toneOf(i), this.readRuns(i))
     this.follow.alongLine(range)
-    if (this.lineAt < 0 || !map.sameLine(this.lineAt, i)) {
+    // The press should not move the page the reader is looking at, so scroll only to bring a start off screen into view.
+    if (this.armed) {
+      if (inView(range)) this.onLine()
+      else this.follow.toLine(range, this.onLine)
+    } else if (this.lineAt < 0 || !map.sameLine(this.lineAt, i)) {
       this.lineAt = i
       this.follow.toLine(range, this.onLine)
     }

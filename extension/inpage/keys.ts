@@ -31,7 +31,7 @@ export interface ClickTarget {
   readonly wordMap: WordMap | null
   /** True when the page replaced the text the reading is on. */
   readonly mapStale: boolean
-  jump(i: number): void
+  pick(i: number): void
   rebuildMap(): WordMap | null
 }
 
@@ -187,7 +187,7 @@ export function attachClicks(doc: Document, session: ClickTarget): () => void {
       map = session.rebuildMap()
       i = map?.wordAt(offsetNode, offset) ?? -1
     }
-    if (map && i >= 0 && onWord(map, i, e.clientX, e.clientY)) session.jump(i)
+    if (map && i >= 0 && onWord(map, i, e.clientX, e.clientY)) session.pick(i)
   }
   win?.addEventListener('focus', onWindowFocus)
   doc.addEventListener('pointerdown', onPointerDown, true)
