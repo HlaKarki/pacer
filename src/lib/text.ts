@@ -186,3 +186,32 @@ export function sectionAt(doc: Doc, i: number): Section {
   }
   return sections[lo]
 }
+
+const FIND_CHARS = 80
+
+const lettersOf = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+
+/** The word where the text first appears, or -1. A PDF viewer's selection breaks lines and hyphens where the parsed text does not, so only letters and digits are compared. */
+export function findText(doc: Doc, text: string): number {
+  const key = lettersOf(text).slice(0, FIND_CHARS)
+  if (!key) return -1
+  const starts = new Int32Array(doc.words.length)
+  const parts: string[] = []
+  let length = 0
+  doc.words.forEach((word, i) => {
+    starts[i] = length
+    const letters = lettersOf(word.text)
+    parts.push(letters)
+    length += letters.length
+  })
+  const at = parts.join('').indexOf(key)
+  if (at < 0) return -1
+  let lo = 0
+  let hi = starts.length - 1
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1
+    if (starts[mid] <= at) lo = mid
+    else hi = mid - 1
+  }
+  return lo
+}

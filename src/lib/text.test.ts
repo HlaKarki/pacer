@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
-import { chunkAt, escapeBody, parse, SECTION_WORDS, sectionAt, sentenceStart } from './text'
+import { chunkAt, escapeBody, findText, parse, SECTION_WORDS, sectionAt, sentenceStart } from './text'
 import { orpIndex, rampFactor, weightPrefix, wordCost } from './timing'
 import { parseFrequency, UNKNOWN_ZIPF, zipfOf } from './frequency'
 
@@ -177,5 +177,29 @@ describe('timing', () => {
     expect(orpIndex('reading')).toBe(2)
     expect(orpIndex('“reading')).toBe(3)
     expect(orpIndex('a')).toBe(0)
+  })
+})
+
+describe('findText', () => {
+  const doc = parse('Attention is all you need.\n\nRecurrent neural networks, long short-term memory and gated recurrent networks — in particular — have been firmly established.\n\nThe transduction problem stays hard.')
+  const at = (text: string) => doc.words[findText(doc, text)]?.text
+
+  test('finds the first word of the selected text', () => {
+    expect(at('long short-term memory')).toBe('long')
+    expect(findText(doc, 'Attention is')).toBe(0)
+  })
+
+  test('ignores line breaks, hyphens, case and punctuation from a PDF selection', () => {
+    expect(at('RECURRENT neural\nnet-\nworks,  long')).toBe('Recurrent')
+    expect(at('trans-\nduction problem')).toBe('transduction')
+  })
+
+  test('lands on the word after a dash that has no letters', () => {
+    expect(at('in particular')).toBe('in')
+  })
+
+  test('says -1 when the text is not there or has no letters', () => {
+    expect(findText(doc, 'convolutional layers')).toBe(-1)
+    expect(findText(doc, ' — ')).toBe(-1)
   })
 })
