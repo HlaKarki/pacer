@@ -9,6 +9,7 @@ const GRAM = 3
 const LOOK = 24
 const REBUILD_MS = 1000
 const OWN_HOST = /^pacer-/
+const DIALOG = 'dialog, [role=dialog], [role=alertdialog], [aria-modal="true"]'
 
 /** Each word's token index on the page, or -1. Word triples found once in both lists anchor the match, and the words between anchors match forward, then backward. */
 export function alignWords(words: string[], tokens: string[]): Int32Array {
@@ -440,8 +441,27 @@ export class WordMap {
     const x = rect.left + rect.width / 2
     const y = rect.top + rect.height / 2
     if (x < 0 || y < 0 || x > win.innerWidth || y > win.innerHeight) return true
-    const top = doc.elementsFromPoint(x, y).find((el) => !OWN_HOST.test(el.localName))
-    return !top?.contains(range.startContainer)
+    return !this.topAt(x, y)?.contains(range.startContainer)
+  }
+
+  /** True when a dialog, or a fixed box over half the window, sits over the line's middle, so reading on past it is pointless. */
+  overlaid(range: Range): boolean {
+    const rect = range.getClientRects()[0]
+    const win = this.root.ownerDocument.defaultView
+    if (!rect || !win) return false
+    const top = this.topAt(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    if (!top || top.contains(range.startContainer)) return false
+    if (top.closest(DIALOG)) return true
+    for (let el: Element | null = top; el; el = el.parentElement) {
+      if (styleOf(el)?.position !== 'fixed') continue
+      const box = el.getBoundingClientRect()
+      return box.width * box.height > (win.innerWidth * win.innerHeight) / 2
+    }
+    return false
+  }
+
+  private topAt(x: number, y: number): Element | undefined {
+    return this.root.ownerDocument.elementsFromPoint(x, y).find((el) => !OWN_HOST.test(el.localName))
   }
 
   canRebuild(): boolean {

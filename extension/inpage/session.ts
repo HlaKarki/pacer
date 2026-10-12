@@ -528,7 +528,7 @@ export class InPageSession {
       this.coveredRun = 0
       return
     }
-    if (this.coveredRun++ >= COVERED_SKIPS) {
+    if (this.map.overlaid(range) || this.coveredRun++ >= COVERED_SKIPS) {
       this.pause(COVERED)
       return
     }

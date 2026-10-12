@@ -10,6 +10,7 @@ const CONTROLS = ['a[href]', 'button', 'summary', 'video', 'audio', ...ROLES.spl
 const FOCUSABLE = '[tabindex]:not([tabindex="-1"])'
 const CLICKABLE = `${CONTROLS}, ${EDITABLE}, label`
 const OVERLAY = 'dialog[open], [aria-modal="true"], :popover-open, [role=dialog], [role=alertdialog], [role=menu], [role=listbox]'
+const MODAL = 'dialog:modal, [aria-modal="true"]'
 
 /** What the reading keys drive. */
 export interface KeyTarget {
@@ -66,7 +67,7 @@ export function deepFocus(e: Event, doc: Document): Element | null {
   return el
 }
 
-const overlayOpen = (doc: Document) => [...doc.querySelectorAll(OVERLAY)].some((el) => el.checkVisibility())
+const shown = (doc: Document, selector: string) => [...doc.querySelectorAll(selector)].some((el) => el.checkVisibility())
 
 // Wikipedia keeps some aria-expanded buttons open for good, so only focus inside an open control counts.
 const inOpenControl = (el: Element | null) => el?.closest('[aria-expanded="true"]') != null
@@ -80,9 +81,9 @@ export function attachKeys(win: Window, session: KeyTarget): () => void {
 
   const actionFor = (e: KeyboardEvent): (() => void) | null => {
     const focus = deepFocus(e, doc)
-    if (!isReadingFocus(focus, focus === clicked)) return null
+    if (!isReadingFocus(focus, focus === clicked) || focus?.closest(OVERLAY) || shown(doc, MODAL)) return null
     if (e.key === 'Escape') {
-      if (overlayOpen(doc) || inOpenControl(focus)) return null
+      if (shown(doc, OVERLAY) || inOpenControl(focus)) return null
       return () => (session.playing ? session.pause() : void session.stop('esc'))
     }
     switch (e.key) {

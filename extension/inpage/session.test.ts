@@ -247,6 +247,19 @@ describe('InPageSession', () => {
     expect(lastState(bar).notice).toEqual({ text: 'Something on the page covers the text', action: 'openTab' })
   })
 
+  test('pauses at once and keeps its place when a dialog opens over the text', async () => {
+    page()
+    root.scrollTop = 1000
+    document.getElementById('wall')!.setAttribute('role', 'dialog')
+    covering = () => true
+    const { session, bar } = await begin()
+    runFrames()
+    expect(nowPara()).toBe(6)
+    expect(nowText()).toBe('Paragraph')
+    expect(session.playing).toBe(false)
+    expect(lastState(bar).notice).toEqual({ text: 'Something on the page covers the text', action: 'openTab' })
+  })
+
   test('reads on after one covered caption', async () => {
     page()
     root.scrollTop = 1000

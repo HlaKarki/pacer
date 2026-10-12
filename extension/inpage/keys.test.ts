@@ -206,6 +206,19 @@ describe('attachKeys', () => {
     expect(pageHeard.filter((heard) => heard === 'keydown:Escape').length).toBe(4)
   })
 
+  test('leaves every key to a modal over the page and to a dialog that has focus', () => {
+    const keys = [' ', 'ArrowRight', 'ArrowLeft', 'ArrowUp']
+    document.body.insertAdjacentHTML('beforeend', '<div id="lightbox" role="dialog" aria-modal="true"><img alt="Photo"></div>')
+    for (const key of keys) press(document.body, key)
+    $('#lightbox').remove()
+    document.body.insertAdjacentHTML('beforeend', '<div id="cookies" role="dialog"><p id="ask" tabindex="-1">Cookies?</p></div>')
+    for (const key of keys) press($('#ask'), key)
+    expect(calls).toEqual([])
+    expect(pageHeard.filter((heard) => heard.startsWith('keydown')).length).toBe(8)
+    press(document.body, ' ')
+    expect(calls).toEqual(['toggle'])
+  })
+
   test('leaves shortcuts, IME input and keys from Pacer’s own bar alone', () => {
     press(document.body, ' ', { metaKey: true })
     press(document.body, 'ArrowRight', { ctrlKey: true })

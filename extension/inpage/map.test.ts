@@ -196,6 +196,31 @@ describe('WordMap', () => {
     expect(map.covered(range)).toBe(true)
   })
 
+  test('tells a dialog or a wall over the window from something over one block', () => {
+    const doc = parse(ARTICLE_TEXT)
+    const root = page(`${ARTICLE}<div id="dlg" role="dialog"><p>Join</p></div><div id="wall" style="position: fixed"></div>
+      <div id="banner" style="position: fixed"><span>Cookies</span></div><img id="photo" style="position: absolute">`)
+    const map = WordMap.build(doc, root)
+    RangeProto.getClientRects = () => [{ top: 300, height: 20, left: 100, width: 50 }] as unknown as DOMRectList
+    const box = (id: string, width: number, height: number) =>
+      (root.querySelector(`#${id}`)!.getBoundingClientRect = () => ({ top: 0, left: 0, width, height, right: width, bottom: height }) as DOMRect)
+    box('wall', window.innerWidth, window.innerHeight)
+    box('banner', window.innerWidth, 120)
+    const p = root.querySelector('article p')!
+    let stack: Element[] = []
+    document.elementsFromPoint = () => stack
+    const range = map.rangeOf(3, 4)!
+    const overlaid = (...on: Element[]) => {
+      stack = [...on, p, root]
+      return map.overlaid(range)
+    }
+    expect(overlaid(root.querySelector('#dlg p')!)).toBe(true)
+    expect(overlaid(root.querySelector('#wall')!)).toBe(true)
+    expect(overlaid(root.querySelector('#banner span')!)).toBe(false)
+    expect(overlaid(root.querySelector('#photo')!)).toBe(false)
+    expect(overlaid()).toBe(false)
+  })
+
   test('rebuilds at most once a second', () => {
     const now = spyOn(performance, 'now').mockReturnValue(5000)
     const map = WordMap.build(parse(ARTICLE_TEXT), page(ARTICLE))
