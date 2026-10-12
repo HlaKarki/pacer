@@ -8,6 +8,7 @@ import { extractArticle, HEADER_STRIP, matchParagraph, openingsAtTop, type Artic
 import { withoutHash } from '../pages'
 import { ExtensionStore, PAST_END, startFrom } from '../store'
 import { Follow, inView } from './follow'
+import { Bar } from './bar'
 import { attachClicks, attachKeys } from './keys'
 import { MIN_COVERAGE, WordMap } from './map'
 import { Marks, type Tone, type ToneRun } from './marks'
@@ -132,7 +133,7 @@ export class InPageSession {
     this.win = options.win ?? window
     this.key = withoutHash(this.win.location.href)
     this.options = {
-      mountBar: options.mountBar ?? (() => NO_BAR),
+      mountBar: options.mountBar ?? ((actions) => Bar.mount(actions, this.win.document)),
       openTab: options.openTab ?? nothing,
       readOn: options.readOn ?? nothing,
       ended: options.ended ?? nothing,
