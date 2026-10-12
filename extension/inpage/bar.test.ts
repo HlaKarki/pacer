@@ -238,6 +238,26 @@ describe('Bar', () => {
     expect(inBar('.settings').hidden).toBe(false)
   })
 
+  test('lets go of its page listener when the panel closes or the bar goes, and keeps focus on the page from anywhere in the panel', () => {
+    const added = spyOn(document, 'addEventListener')
+    const removed = spyOn(document, 'removeEventListener')
+    const pointerDowns = (spy: typeof added) => spy.mock.calls.filter(([type]) => type === 'pointerdown').map(([, listener, capture]) => [listener, capture])
+    const bar = Bar.mount(actions, document)
+    bar.render(STATE)
+    button('Reading settings').click()
+    bar.closeSettings()
+    expect(pointerDowns(removed)).toEqual(pointerDowns(added))
+    button('Reading settings').click()
+    const down = new window.MouseEvent('mousedown', { bubbles: true, cancelable: true })
+    inBar('.settings .setting-label').dispatchEvent(down as unknown as Event)
+    expect(down.defaultPrevented).toBe(true)
+    bar.dispose()
+    expect(pointerDowns(added).length).toBe(2)
+    expect(pointerDowns(removed)).toEqual(pointerDowns(added))
+    added.mockRestore()
+    removed.mockRestore()
+  })
+
   test('closes the panel on an Esc typed inside the bar, handing focus back to the sliders button', () => {
     const bar = Bar.mount(actions, document)
     bar.render(STATE)
