@@ -19,7 +19,7 @@ export type ToggleResult =
   | { kind: 'started' }
   | { kind: 'stopped' }
   | { kind: 'busy' }
-  | { kind: 'fallback'; article: Article; coverage: number }
+  | { kind: 'fallback'; article: Article }
   | { kind: 'error'; message: string }
 
 export type StopReason = 'esc' | 'toolbar' | 'close' | 'pagehide' | 'navigate' | 'tab'
@@ -211,7 +211,7 @@ export class InPageSession {
     const start = map.coverage < MIN_COVERAGE ? null : viewportStart(doc, map, win)
     if (!start) {
       this.dispose()
-      return { kind: 'fallback', article: { ...article, startParagraph: this.fallbackParagraph(doc) }, coverage: map.coverage }
+      return { kind: 'fallback', article: { ...article, startParagraph: this.fallbackParagraph(doc) } }
     }
     const place = await store.place(this.key)
     if (this.gone()) return this.stopped()

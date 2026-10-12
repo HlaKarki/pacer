@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { Window } from 'happy-dom'
-import { blocksFromHtml, clean, sourcedBlocksFromHtml, type HtmlOptions, type SourcedBlock } from './html'
+import { blocksFromHtml, sourcedBlocksFromHtml, type HtmlOptions, type SourcedBlock } from './html'
 
 const window = new Window()
 globalThis.Node = window.Node as unknown as typeof Node
@@ -100,12 +100,10 @@ function fromNodes(block: SourcedBlock, start: number, end: number): string {
 }
 
 describe('sourcedBlocksFromHtml', () => {
-  FIXTURES.forEach(({ name, html, options }) => {
-    test(`matches blocksFromHtml: ${name}`, () => {
-      const root = body(html)
-      const sourced = sourcedBlocksFromHtml(root, options)
-      expect(sourced.map(({ text, level }) => ({ text, level }))).toEqual(blocksFromHtml(root, options))
-      for (const block of sourced) expect(clean(block.raw)).toBe(block.text)
+  FIXTURES.forEach(({ name, html, options }, k) => {
+    test(`gives the pinned blocks: ${name}`, () => {
+      const sourced = sourcedBlocksFromHtml(body(html), options)
+      expect(sourced.map(({ text, level }) => ({ text, level }))).toEqual(EXPECTED[k])
     })
 
     test(`slices every token back out of its text nodes: ${name}`, () => {

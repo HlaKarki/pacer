@@ -240,7 +240,7 @@ describe('Read on', () => {
     ;(await started(page)).options.readOn!()
     await tick()
     const grown = { ...ARTICLE, text: 'Words to read and more.', startParagraph: 5 }
-    made[1].finish({ kind: 'fallback', article: grown, coverage: 0.5 })
+    made[1].finish({ kind: 'fallback', article: grown })
     await tick()
     expect(sent).toEqual([{ type: 'pacer:open-tab', article: grown }])
   })

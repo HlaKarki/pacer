@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test'
 import { Window } from 'happy-dom'
 import { parse } from '../../src/lib/text'
+import { MIN_COVERAGE, WordMap } from './map'
 import { InPageSession, type BarActions, type BarState, type LineBox, type SessionOptions, type ToggleResult } from './session'
 
 const window = new Window({ url: 'https://example.com/essay#intro' })
@@ -214,7 +215,7 @@ describe('InPageSession', () => {
     const { result, bar, ended } = await begin()
     expect(result.kind).toBe('fallback')
     if (result.kind !== 'fallback') return
-    expect(result.coverage).toBeLessThan(0.85)
+    expect(WordMap.build(parse(result.article.text), document.body as unknown as Element).coverage).toBeLessThan(MIN_COVERAGE)
     expect(result.article.title).toBe('How Eyes Read')
     expect(result.article.startParagraph).toBe(0)
     expect(result.article.text).toContain('Paragraph 12 opens')
