@@ -412,6 +412,21 @@ describe('InPageSession', () => {
     session.dispose()
   })
 
+  test('pauses when a contents link scrolls the page away and picks up at the paragraph in view', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session } = await begin()
+    await advance(500)
+    root.scrollTop = 1600
+    document.dispatchEvent(new window.Event('scroll', { bubbles: true }) as unknown as Event)
+    expect(session.playing).toBe(false)
+    await advance(1000)
+    expect(root.scrollTop).toBe(1600)
+    session.play()
+    expect([nowText(), nowPara()]).toEqual(['Paragraph', 9])
+    session.dispose()
+  })
+
   test('saves the paragraph in view as the place when the reader scrolled the line away and stopped', async () => {
     page()
     root.scrollTop = 1000

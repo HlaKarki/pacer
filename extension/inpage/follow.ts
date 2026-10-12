@@ -47,6 +47,8 @@ function onScrollbar(e: PointerEvent): boolean {
 export class Follow {
   private frame = 0
   private expected = 0
+  private el: Element | null = null
+  private line: Range | null = null
   private readonly win: Window
   private readonly detach: () => void
 
@@ -68,12 +70,22 @@ export class Follow {
       if ((e.target as Element | null)?.closest?.(EDITABLE)) return
       user(e)
     }
+    // Contents links, find in page and page scripts scroll without a wheel or a key, so watch the scroll itself.
+    const onScroll = (e: Event) => {
+      const el = e.target === win.document ? win.document.scrollingElement : e.target
+      if (!this.el || el !== this.el || Math.abs(this.el.scrollTop - this.expected) <= 1) return
+      // Scroll anchoring nudges the page as images load above, so only a scroll that takes the line off screen counts.
+      if (this.line && inView(this.line)) this.expected = this.el.scrollTop
+      else user(e)
+    }
     const options = { capture: true, passive: true }
+    win.addEventListener('scroll', onScroll, options)
     win.addEventListener('wheel', onWheel, options)
     win.addEventListener('touchmove', user, options)
     win.addEventListener('pointerdown', onPointer, options)
     win.addEventListener('keydown', onKey, options)
     this.detach = () => {
+      win.removeEventListener('scroll', onScroll, options)
       win.removeEventListener('wheel', onWheel, options)
       win.removeEventListener('touchmove', user, options)
       win.removeEventListener('pointerdown', onPointer, options)
@@ -91,6 +103,8 @@ export class Follow {
     const rect = range.getClientRects()[0]
     if (!rect) return
     const { el, top, height } = viewportOf(range.startContainer)
+    this.el = el
+    this.line = range
     const from = el.scrollTop
     const target = Math.max(0, Math.min(from + rect.top - top - height * BAND, el.scrollHeight - el.clientHeight))
     const distance = target - from

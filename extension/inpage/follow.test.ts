@@ -162,6 +162,24 @@ describe('Follow user scrolls', () => {
     expect(scrolls).toBe(4)
   })
 
+  test('reports a scroll from a link or the page that takes the line off screen, but not a nudge or its own scrolling', () => {
+    reduced = true
+    let scrolls = 0
+    const follow = Follow.attach(win, () => scrolls++)
+    const scrolled = () => document.dispatchEvent(new window.Event('scroll', { bubbles: true }) as unknown as Event)
+    follow.toLine(lineAt(1000), () => {})
+    scrolled()
+    root.scrollTop += 120
+    scrolled()
+    expect(scrolls).toBe(0)
+    root.scrollTop = 3000
+    scrolled()
+    expect(scrolls).toBe(1)
+    document.querySelector('p')!.dispatchEvent(new window.Event('scroll') as unknown as Event)
+    expect(scrolls).toBe(1)
+    follow.dispose()
+  })
+
   test('stops its own glide when the reader scrolls', () => {
     const now = spyOn(performance, 'now').mockReturnValue(0)
     const follow = Follow.attach(win, () => {})
