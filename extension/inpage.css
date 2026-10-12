@@ -15,3 +15,12 @@
 ::highlight(pacer-read-dark) {
   color: #848789;
 }
+
+::highlight(pacer-now-warm) {
+  color: #1b2126;
+  background-color: #bcd0ff;
+}
+
+::highlight(pacer-read-warm) {
+  color: #6b7072;
+}
