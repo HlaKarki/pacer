@@ -4,6 +4,7 @@ import { orpIndex } from '../lib/timing'
 interface FocusViewProps {
   doc: Doc
   chunk: { start: number; end: number }
+  bySentence: boolean
   onJump: (index: number) => void
 }
 
@@ -16,12 +17,21 @@ function splitAtPivot(text: string, single: boolean) {
   return [text.slice(0, pivot), text[pivot] ?? '', text.slice(pivot + 1)]
 }
 
-export function FocusView({ doc, chunk, onJump }: FocusViewProps) {
+export function FocusView({ doc, chunk, bySentence, onJump }: FocusViewProps) {
   const { words, sentences } = doc
   const text = words
     .slice(chunk.start, chunk.end)
     .map((w) => w.text)
     .join(' ')
+  if (bySentence) {
+    return (
+      <div className="pc-focus">
+        <div className="pc-focus-reticle pc-focus-reticle-sentence">
+          <p className="pc-focus-sentence">{text}</p>
+        </div>
+      </div>
+    )
+  }
   const [left, pivot, right] = splitAtPivot(text, chunk.end - chunk.start === 1)
 
   const sent = words[chunk.start]?.sent ?? 0

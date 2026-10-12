@@ -277,7 +277,7 @@
   font-size: 1.1em;
 }
 
-.pc-root .pc-flow-content > .pc-flow-heading:nth-child(2) {
+.pc-root .pc-flow-content > .pc-marker-rest + .pc-flow-heading {
   margin-top: 0;
 }
 
@@ -387,6 +387,23 @@
   font-weight: 450;
   line-height: 1.2;
   white-space: pre;
+}
+
+.pc-root .pc-focus-reticle-sentence::before,
+.pc-root .pc-focus-reticle-sentence::after {
+  display: none;
+}
+
+/* Fit-content keeps a one-line sentence centered while longer ones stay left-aligned for easy line returns. */
+.pc-root .pc-focus-sentence {
+  width: fit-content;
+  max-height: 60vh;
+  margin: 0 auto;
+  overflow-y: auto;
+  font-family: var(--pc-font-read);
+  font-size: clamp(1.25rem, 4.2cqw, 1.75rem);
+  line-height: 1.45;
+  text-wrap: pretty;
 }
 
 .pc-root .pc-focus-left {
@@ -547,9 +564,10 @@
 
 .pc-root .pc-setting {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
 }
 
 .pc-root .pc-setting-text {

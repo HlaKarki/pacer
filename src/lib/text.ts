@@ -29,7 +29,7 @@ export interface Doc {
   sections: Section[]
 }
 
-export type ChunkSize = 1 | 2 | 3 | 'phrase'
+export type ChunkSize = 1 | 2 | 3 | 'phrase' | 'sentence'
 
 /** Flow mode renders one section at a time, so a whole book never sits in the DOM at once. */
 export const SECTION_WORDS = 4000
@@ -139,7 +139,7 @@ export function countWords(raw: string): number {
 
 const bareWord = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '')
 
-/** A chunk never crosses a pause or a paragraph, and with `lineOf` it never wraps onto a second line. */
+/** A chunk never crosses a pause or a paragraph, and with `lineOf` it never wraps onto a second line. A sentence chunk runs to the end of its sentence. */
 export function chunkAt(
   doc: Doc,
   start: number,
@@ -147,6 +147,10 @@ export function chunkAt(
   lineOf?: (i: number) => number,
 ): { start: number; end: number } {
   const { words } = doc
+  if (size === 'sentence') {
+    const sentence = doc.sentences[words[start]?.sent ?? -1]
+    return { start, end: sentence ? sentence.end : Math.min(start + 1, words.length) }
+  }
   const phrase = size === 'phrase'
   const limit = phrase ? PHRASE_MAX_WORDS : size
   let letters = words[start] ? bareWord(words[start].text).length : 0

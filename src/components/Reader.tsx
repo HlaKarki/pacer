@@ -75,6 +75,7 @@ export function Reader({
     () => chunkAt(doc, index, settings.chunk, lineOf),
     [doc, index, settings.chunk, lineOf],
   )
+  const bySentence = settings.chunk === 'sentence'
   const duration = chunkMs(prefix, chunk, settings.wpm)
   const glideMs = Math.round(Math.min(140, Math.max(60, duration * 0.45)))
   const remaining = (prefix[total] - prefix[index]) * msPerWord(settings.wpm)
@@ -85,9 +86,9 @@ export function Reader({
       sincePlay.current += 1
       if (chunk.end >= total) setPlaying(false)
       else setIndex(chunk.end)
-    }, duration * rampFactor(sincePlay.current))
+    }, duration * (bySentence ? 1 : rampFactor(sincePlay.current)))
     return () => window.clearTimeout(timer)
-  }, [playing, chunk, duration, total, setIndex])
+  }, [playing, chunk, duration, total, setIndex, bySentence])
 
   const play = useCallback(() => {
     if (chunk.end >= total) setIndex(0)
@@ -136,7 +137,7 @@ export function Reader({
           break
         case 'ArrowLeft':
           e.preventDefault()
-          if (e.shiftKey || e.altKey) prevSentence()
+          if (e.shiftKey || e.altKey || bySentence) prevSentence()
           else jump(index - 1)
           break
         case 'ArrowRight':
@@ -164,7 +165,7 @@ export function Reader({
     }
     keyTarget.addEventListener('keydown', onKey)
     return () => keyTarget.removeEventListener('keydown', onKey)
-  }, [keyTarget, toggle, prevSentence, nextSentence, jump, setWpm, update, onExit, index, chunk.end, settings, panel, playing])
+  }, [keyTarget, toggle, prevSentence, nextSentence, jump, setWpm, update, onExit, index, chunk.end, settings, panel, playing, bySentence])
 
   useEffect(() => {
     if (!playing || !window.matchMedia('(hover: hover)').matches) return
@@ -276,7 +277,7 @@ export function Reader({
             onUserScroll={pause}
           />
         ) : (
-          <FocusView doc={doc} chunk={chunk} onJump={jump} />
+          <FocusView doc={doc} chunk={chunk} bySentence={bySentence} onJump={jump} />
         )}
       </main>
 

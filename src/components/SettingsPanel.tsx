@@ -52,14 +52,19 @@ function Choices<T extends string | number>({
   )
 }
 
-const shortcuts = (canExit: boolean): [string, string][] => [
+const shortcuts = (canExit: boolean, bySentence: boolean): [string, string][] => [
   ['Space', 'Play or pause'],
-  ['← →', 'Back or forward one word'],
-  ['⇧← ⇧→', 'Back or forward one sentence'],
+  ['← →', bySentence ? 'Back or forward one sentence' : 'Back or forward one word'],
+  ...(bySentence ? [] : [['⇧← ⇧→', 'Back or forward one sentence'] satisfies [string, string]]),
   ['↑ ↓', 'Faster or slower'],
   ['F', 'Switch between Flow and Focus'],
   ['Esc', canExit ? 'Pause, then go back' : 'Pause'],
 ]
+
+const CHUNK_HINTS: Partial<Record<ChunkSize, string>> = {
+  phrase: 'Small words ride with the next word',
+  sentence: 'The whole sentence lights up at once',
+}
 
 const ON_OFF: Choice<'on' | 'off'>[] = [
   { value: 'on', label: 'On' },
@@ -74,13 +79,14 @@ export function SettingsPanel({ settings, update, canExit, showTheme, onClose }:
     <div className="pc-popover pc-settings" ref={ref} role="dialog" aria-label="Reading settings">
       <Choices<ChunkSize>
         label="Words at a time"
-        hint={settings.chunk === 'phrase' ? 'Small words ride with the next word' : undefined}
+        hint={CHUNK_HINTS[settings.chunk]}
         value={settings.chunk}
         choices={[
           { value: 1, label: '1' },
           { value: 2, label: '2' },
           { value: 3, label: '3' },
           { value: 'phrase', label: 'Phrase' },
+          { value: 'sentence', label: 'Sentence' },
         ]}
         onChange={(chunk) => update({ chunk })}
       />
@@ -121,7 +127,7 @@ export function SettingsPanel({ settings, update, canExit, showTheme, onClose }:
       ) : null}
 
       <dl className="pc-shortcuts">
-        {shortcuts(canExit).map(([keys, action]) => (
+        {shortcuts(canExit, settings.chunk === 'sentence').map(([keys, action]) => (
           <div key={keys}>
             <dt>
               {keys.split(' ').map((k) => (

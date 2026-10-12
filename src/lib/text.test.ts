@@ -112,6 +112,16 @@ describe('chunkAt', () => {
     const d = parse('the incomprehensibility was')
     expect(chunkAt(d, 0, 'phrase')).toEqual({ start: 0, end: 1 })
   })
+
+  test('sentence mode runs across pauses and lines to the end of the sentence', () => {
+    const lineOf = (i: number) => i
+    expect(chunkAt(doc, 0, 'sentence', lineOf)).toEqual({ start: 0, end: 7 })
+    expect(chunkAt(doc, 7, 'sentence')).toEqual({ start: 7, end: 9 })
+  })
+
+  test('sentence mode starting mid-sentence reads the rest of it', () => {
+    expect(chunkAt(doc, 3, 'sentence')).toEqual({ start: 3, end: 7 })
+  })
 })
 
 describe('frequency', () => {

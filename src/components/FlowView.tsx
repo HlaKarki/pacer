@@ -17,6 +17,14 @@ const BAND = 0.36
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+function placeMarker(marker: HTMLElement, [first, last]: [HTMLElement, HTMLElement]) {
+  const padX = 4
+  const padY = 2
+  marker.style.transform = `translate3d(${first.offsetLeft - padX}px, ${first.offsetTop - padY}px, 0)`
+  marker.style.width = `${last.offsetLeft + last.offsetWidth - first.offsetLeft + padX * 2}px`
+  marker.style.height = `${first.offsetHeight + padY * 2}px`
+}
+
 const Paragraphs = memo(function Paragraphs({ doc, start, end }: { doc: Doc; start: number; end: number }) {
   return doc.paragraphs
     .filter((p) => p.start >= start && p.end <= end)
@@ -56,6 +64,8 @@ export function FlowView({
   const viewportRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const markerRef = useRef<HTMLDivElement>(null)
+  const restRef = useRef<HTMLDivElement>(null)
+  const markedSegments = useRef(1)
   const spans = useRef<HTMLElement[]>([])
   const lines = useRef<Int32Array>(new Int32Array(0))
   const markedLine = useRef(-1)
@@ -130,27 +140,41 @@ export function FlowView({
 
   useLayoutEffect(() => {
     const marker = markerRef.current
+    const rest = restRef.current
     const start = chunk.start - offset
     const first = spans.current[start]
-    const last = spans.current[chunk.end - 1 - offset]
     activeStart.current = start
-    if (!marker || !first || !last) return
+    if (!marker || !rest || !first) return
+
+    const segments: [HTMLElement, HTMLElement][] = []
+    for (let i = start; i < chunk.end - offset && spans.current[i]; i++) {
+      const span = spans.current[i]
+      const segment = segments.at(-1)
+      if (segment && lines.current[i] === lines.current[i - 1]) segment[1] = span
+      else segments.push([span, span])
+    }
 
     const line = lines.current[start]
-    const glide = playing && line === markedLine.current && !prefersReducedMotion()
-    const padX = 4
-    const padY = 2
-    const x = first.offsetLeft - padX
-    const y = first.offsetTop - padY
-    const width = last.offsetLeft + last.offsetWidth - first.offsetLeft + padX * 2
-    const height = first.offsetHeight + padY * 2
+    // Extra line markers jump into place, so the first one only glides when no wrapped chunk is involved.
+    const glide =
+      playing &&
+      line === markedLine.current &&
+      segments.length === 1 &&
+      markedSegments.current === 1 &&
+      !prefersReducedMotion()
     marker.style.transition = glide
       ? `transform ${glideMs}ms var(--pc-ease-glide), width ${glideMs}ms var(--pc-ease-glide)`
       : 'none'
-    marker.style.transform = `translate3d(${x}px, ${y}px, 0)`
-    marker.style.width = `${width}px`
-    marker.style.height = `${height}px`
+    placeMarker(marker, segments[0])
+    while (rest.childElementCount < segments.length - 1) {
+      const extra = document.createElement('div')
+      extra.className = 'pc-marker'
+      rest.append(extra)
+    }
+    while (rest.childElementCount > segments.length - 1) rest.lastElementChild!.remove()
+    segments.slice(1).forEach((segment, k) => placeMarker(rest.children[k] as HTMLElement, segment))
     markedLine.current = line
+    markedSegments.current = segments.length
 
     // Toggle only the words whose read state changed, since long texts have tens of thousands of spans.
     const from = Math.min(readUpTo.current, start)
@@ -194,6 +218,7 @@ export function FlowView({
           }}
         >
           <div className="pc-marker" ref={markerRef} aria-hidden />
+          <div className="pc-marker-rest" ref={restRef} aria-hidden />
           <Paragraphs doc={doc} start={section.start} end={section.end} />
         </div>
       </div>
