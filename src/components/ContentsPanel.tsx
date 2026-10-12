@@ -21,9 +21,9 @@ export function ContentsPanel({ title, chapters, current, onPick, onClose }: Con
   }, [])
 
   return (
-    <div className="popover contents" ref={ref} role="dialog" aria-label="Contents">
-      {title ? <p className="contents-title">{title}</p> : null}
-      <ol className="contents-list">
+    <div className="pc-popover pc-contents" ref={ref} role="dialog" aria-label="Contents">
+      {title ? <p className="pc-contents-title">{title}</p> : null}
+      <ol className="pc-contents-list">
         {chapters.map((chapter, i) => (
           <li key={chapter.start}>
             <button

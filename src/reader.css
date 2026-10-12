@@ -1,0 +1,708 @@
+.pc-root {
+  --pc-ease-glide: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --pc-ease-out: cubic-bezier(0.19, 1, 0.22, 1);
+  container-type: inline-size;
+  background: var(--pc-paper);
+  color: var(--pc-ink);
+  font-family: var(--pc-font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+.pc-root *,
+.pc-root *::before,
+.pc-root *::after {
+  box-sizing: border-box;
+}
+
+.pc-root :focus-visible {
+  outline: 2px solid var(--pc-accent);
+  outline-offset: 2px;
+}
+
+/* Host pages like Obsidian style bare buttons, so start Pacer's from nothing. Zero specificity keeps every Pacer rule above it. */
+:where(.pc-root) button {
+  display: inline-block;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  box-shadow: none;
+  corner-shape: round;
+}
+
+.pc-root .pc-btn {
+  box-shadow: none;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 550;
+  height: 40px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--pc-rule);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pc-ink);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    transform 150ms var(--pc-ease-glide);
+}
+
+.pc-root .pc-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.pc-root .pc-btn-primary {
+  background: var(--pc-accent);
+  border-color: transparent;
+  color: var(--pc-accent-ink);
+}
+
+.pc-root .pc-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pc-root .pc-btn-quiet {
+  border-color: transparent;
+  padding: 0 14px 0 10px;
+  color: var(--pc-ink-soft);
+}
+
+.pc-root .pc-icon-btn {
+  box-shadow: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pc-ink-soft);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    transform 150ms var(--pc-ease-glide);
+}
+
+.pc-root .pc-icon-btn:active {
+  transform: scale(0.94);
+}
+
+.pc-root .pc-icon-btn-sm {
+  width: 32px;
+  height: 32px;
+}
+
+.pc-root .pc-play-btn {
+  box-shadow: none;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pc-accent);
+  color: var(--pc-accent-ink);
+  cursor: pointer;
+  transition: transform 150ms var(--pc-ease-glide);
+}
+
+.pc-root .pc-play-btn[aria-label='Play'] svg {
+  translate: 1.5px 0;
+}
+
+.pc-root .pc-play-btn:active {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pc-root .pc-btn:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--pc-ink) 6%, transparent);
+  }
+  .pc-root .pc-btn-primary:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--pc-accent) 86%, var(--pc-ink));
+  }
+  .pc-root .pc-icon-btn:hover {
+    background: color-mix(in oklab, var(--pc-ink) 7%, transparent);
+    color: var(--pc-ink);
+  }
+  .pc-root .pc-play-btn:hover {
+    background: color-mix(in oklab, var(--pc-accent) 86%, var(--pc-ink));
+  }
+}
+
+@media (pointer: coarse) {
+  .pc-root .pc-icon-btn-sm {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.pc-root .pc-segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--pc-ink) 6%, transparent);
+}
+
+.pc-root .pc-segmented button {
+  box-shadow: none;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 550;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pc-ink-soft);
+  cursor: pointer;
+}
+
+.pc-root .pc-segmented button[aria-checked='true'] {
+  background: var(--pc-paper-raised);
+  color: var(--pc-ink);
+  box-shadow:
+    0 0 0 1px var(--pc-rule),
+    0 1px 2px var(--pc-shadow);
+}
+
+.pc-root .pc-segmented-sm button {
+  padding: 5px 11px;
+  font-size: 0.8125rem;
+}
+
+.pc-root .pc-reader {
+  --pc-read-size: 21px;
+  height: var(--pc-reader-height, 100%);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.pc-root .pc-reader[data-size='s'] {
+  --pc-read-size: 18px;
+}
+
+.pc-root .pc-reader[data-size='l'] {
+  --pc-read-size: 25px;
+}
+
+.pc-root .pc-reader-bar {
+  position: relative;
+  z-index: 2;
+  transition: opacity 500ms ease;
+}
+
+.pc-root .pc-reader[data-idle] .pc-reader-bar {
+  opacity: 0;
+}
+
+.pc-root .pc-reader[data-idle] {
+  cursor: none;
+}
+
+.pc-root .pc-reader-top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.pc-root .pc-reader-top > :first-child {
+  justify-self: start;
+}
+
+.pc-root .pc-top-actions {
+  justify-self: end;
+  display: flex;
+  gap: 2px;
+}
+
+.pc-root .pc-popover-anchor {
+  position: relative;
+}
+
+.pc-root .pc-reader-body {
+  position: relative;
+  min-height: 0;
+}
+
+.pc-root .pc-flow-stage {
+  position: relative;
+  height: 100%;
+}
+
+.pc-root .pc-flow-viewport {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pc-rule) transparent;
+}
+
+.pc-root .pc-flow-content {
+  position: relative;
+  z-index: 0;
+  width: min(100% - 32px, 34em);
+  margin: 0 auto;
+  padding: var(--pc-band-y, 36vh) 0 var(--pc-pad-below, 64vh);
+  font-family: var(--pc-font-read);
+  font-size: var(--pc-read-size);
+  line-height: 1.75;
+}
+
+.pc-root .pc-flow-content p {
+  margin: 0 0 1.1em;
+  text-wrap: pretty;
+}
+
+.pc-root .pc-flow-heading {
+  margin: 1.6em 0 0.7em;
+  font-family: inherit;
+  font-style: normal;
+  font-variant: normal;
+  color: inherit;
+  font-size: 1.3em;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.pc-root h3.pc-flow-heading {
+  font-size: 1.1em;
+}
+
+.pc-root .pc-flow-content > .pc-flow-heading:nth-child(2) {
+  margin-top: 0;
+}
+
+.pc-root .pc-w {
+  cursor: pointer;
+  transition: color 400ms ease;
+}
+
+.pc-root .pc-w.pc-is-read {
+  color: var(--pc-read);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pc-root .pc-flow-stage:not([data-playing]) .pc-w:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--pc-muted);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.22em;
+  }
+}
+
+/* The uneven radius makes the marker look like a highlighter stroke, so keep it asymmetric. */
+.pc-root .pc-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  background: var(--pc-marker);
+  border-radius: 3px 6px 4px 7px / 7px 4px 6px 3px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.pc-root .pc-flow-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 450ms ease;
+}
+
+.pc-root .pc-flow-stage[data-playing] .pc-flow-fade {
+  opacity: 1;
+}
+
+.pc-root .pc-flow-fade-above {
+  top: 0;
+  height: var(--pc-band-y);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--pc-paper) 88%, transparent),
+    color-mix(in oklab, var(--pc-paper) 28%, transparent)
+  );
+}
+
+.pc-root .pc-flow-fade-below {
+  top: calc(var(--pc-band-y) + var(--pc-line-h));
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    color-mix(in oklab, var(--pc-paper) 90%, transparent),
+    color-mix(in oklab, var(--pc-paper) 22%, transparent)
+  );
+}
+
+.pc-root .pc-focus {
+  height: 100%;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 44px;
+}
+
+.pc-root .pc-focus-reticle {
+  position: relative;
+  width: min(100%, 40rem);
+  padding: 30px 0;
+  border-block: 1px solid var(--pc-rule);
+}
+
+.pc-root .pc-focus-reticle::before,
+.pc-root .pc-focus-reticle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 1px;
+  height: 12px;
+  background: var(--pc-muted);
+}
+
+.pc-root .pc-focus-reticle::before {
+  top: 0;
+}
+
+.pc-root .pc-focus-reticle::after {
+  bottom: 0;
+}
+
+.pc-root .pc-focus-word {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  font-family: var(--pc-font-read);
+  font-size: clamp(2rem, 7cqw, 3.25rem);
+  font-weight: 450;
+  line-height: 1.2;
+  white-space: pre;
+}
+
+.pc-root .pc-focus-left {
+  text-align: right;
+}
+
+.pc-root .pc-focus-pivot {
+  color: var(--pc-accent);
+  font-weight: 600;
+}
+
+.pc-root .pc-focus-context {
+  width: min(100%, 34em);
+  min-height: 7em;
+  font-family: var(--pc-font-read);
+  font-size: calc(var(--pc-read-size) * 0.88);
+  line-height: 1.75;
+  color: var(--pc-ink-soft);
+}
+
+.pc-root .pc-focus-context p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.pc-root .pc-focus-prev {
+  color: var(--pc-muted);
+  margin-bottom: 0.5em !important;
+}
+
+.pc-root .pc-cw {
+  box-shadow: none;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+}
+
+.pc-root .pc-cw.pc-is-read {
+  color: var(--pc-muted);
+}
+
+.pc-root .pc-cw.pc-is-now {
+  color: var(--pc-ink);
+  background: var(--pc-marker);
+  box-shadow: 0 0 0 3px var(--pc-marker);
+}
+
+.pc-root .pc-cw-gap {
+  color: var(--pc-muted);
+}
+
+.pc-root .pc-reader-bottom {
+  padding: 0 16px max(14px, env(safe-area-inset-bottom));
+}
+
+.pc-root .pc-progress {
+  position: relative;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.pc-root .pc-progress::before,
+.pc-root .pc-progress-fill {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 3px;
+}
+
+.pc-root .pc-progress::before {
+  background: var(--pc-rule);
+}
+
+.pc-root .pc-progress-fill {
+  background: var(--pc-ink-soft);
+  transform-origin: left center;
+  transition: transform 200ms linear;
+}
+
+.pc-root .pc-transport {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.pc-root .pc-wpm {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pc-root .pc-wpm-value {
+  min-width: 5em;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--pc-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-root .pc-wpm-value strong {
+  color: var(--pc-ink);
+  font-weight: 600;
+}
+
+.pc-root .pc-transport-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pc-root .pc-time-left {
+  justify-self: end;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--pc-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-root .pc-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  background: var(--pc-paper-raised);
+  border: 1px solid var(--pc-rule);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px -16px var(--pc-shadow);
+  transform-origin: top right;
+  animation: popover-in 180ms var(--pc-ease-out);
+}
+
+.pc-root .pc-settings {
+  width: min(360px, calc(100cqw - 24px));
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+.pc-root .pc-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pc-root .pc-setting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pc-root .pc-setting-label {
+  font-size: 0.875rem;
+  color: var(--pc-ink-soft);
+}
+
+.pc-root .pc-setting-hint {
+  font-size: 0.75rem;
+  color: var(--pc-muted);
+}
+
+.pc-root .pc-contents {
+  width: min(340px, calc(100cqw - 24px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  padding: 10px;
+  overscroll-behavior: contain;
+}
+
+.pc-root .pc-contents-title {
+  margin: 4px 8px 8px;
+  font-family: var(--pc-font-read);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--pc-ink);
+}
+
+.pc-root .pc-contents-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pc-root .pc-contents-list button {
+  box-shadow: none;
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--pc-ink-soft);
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.pc-root .pc-contents-list button[aria-current='true'] {
+  color: var(--pc-ink);
+  font-weight: 600;
+  background: color-mix(in oklab, var(--pc-marker) 55%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pc-root .pc-contents-list button:hover {
+    background: color-mix(in oklab, var(--pc-ink) 6%, transparent);
+  }
+}
+
+.pc-root .pc-shortcuts {
+  margin: 2px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--pc-rule);
+  display: grid;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--pc-muted);
+}
+
+.pc-root .pc-shortcuts div {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+}
+
+.pc-root .pc-shortcuts dd {
+  margin: 0;
+}
+
+.pc-root kbd {
+  margin-right: 4px;
+  padding: 1px 6px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--pc-ink-soft);
+  background: var(--pc-paper);
+  border: 1px solid var(--pc-rule);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+}
+
+@media (hover: none) {
+  .pc-root .pc-shortcuts {
+    display: none;
+  }
+}
+
+@container (max-width: 560px) {
+  .pc-root .pc-reader {
+    --pc-read-size: 19px;
+  }
+  .pc-root .pc-reader[data-size='s'] {
+    --pc-read-size: 17px;
+  }
+  .pc-root .pc-reader[data-size='l'] {
+    --pc-read-size: 22px;
+  }
+  .pc-root .pc-reader-top {
+    padding: 8px 10px;
+  }
+  .pc-root .pc-reader-bottom {
+    padding-inline: 10px;
+  }
+  .pc-root .pc-transport-main {
+    gap: 4px;
+  }
+  .pc-root .pc-wpm-value {
+    min-width: 0;
+    padding-inline: 2px;
+  }
+  .pc-root .pc-time-left,
+.pc-root .pc-wpm-value {
+    font-size: 0.8125rem;
+  }
+  /* Both popovers hang from the screen-edge button so the wider one cannot run off the left side. */
+  .pc-root .pc-top-actions {
+    position: relative;
+  }
+  .pc-root .pc-top-actions .pc-popover-anchor {
+    position: static;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-root .pc-popover {
+    animation-name: popover-fade;
+  }
+  @keyframes popover-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  .pc-root .pc-progress-fill {
+    transition: none;
+  }
+}

@@ -25,7 +25,7 @@ const Paragraphs = memo(function Paragraphs({ doc, start, end }: { doc: Doc; sta
         const i = p.start + j
         return (
           <Fragment key={i}>
-            <span className="w" data-i={i}>
+            <span className="pc-w" data-i={i}>
               {w.text}
             </span>
             {i < p.end - 1 ? ' ' : null}
@@ -35,7 +35,7 @@ const Paragraphs = memo(function Paragraphs({ doc, start, end }: { doc: Doc; sta
       if (p.heading === 0) return <p key={p.start}>{words}</p>
       const Heading = p.heading <= 2 ? 'h2' : 'h3'
       return (
-        <Heading key={p.start} className="flow-heading">
+        <Heading key={p.start} className="pc-flow-heading">
           {words}
         </Heading>
       )
@@ -93,7 +93,7 @@ export function FlowView({
     const viewport = viewportRef.current
     const stage = stageRef.current
     if (!content || !viewport || !stage) return
-    spans.current = Array.from(content.querySelectorAll<HTMLElement>('.w'))
+    spans.current = Array.from(content.querySelectorAll<HTMLElement>('.pc-w'))
     const map = new Int32Array(spans.current.length)
     let line = -1
     let lastTop = -Infinity
@@ -109,11 +109,11 @@ export function FlowView({
     const firstP = content.querySelector('p')
     const lineHeight = firstP ? parseFloat(getComputedStyle(firstP).lineHeight) : 32
     const bandY = Math.round(viewport.clientHeight * BAND)
-    stage.style.setProperty('--band-y', `${bandY}px`)
-    stage.style.setProperty('--pad-below', `${viewport.clientHeight - bandY}px`)
-    stage.style.setProperty('--line-h', `${Math.round(lineHeight)}px`)
+    stage.style.setProperty('--pc-band-y', `${bandY}px`)
+    stage.style.setProperty('--pc-pad-below', `${viewport.clientHeight - bandY}px`)
+    stage.style.setProperty('--pc-line-h', `${Math.round(lineHeight)}px`)
     readUpTo.current = 0
-    spans.current.forEach((s) => s.classList.remove('is-read'))
+    spans.current.forEach((s) => s.classList.remove('pc-is-read'))
     markedLine.current = -1
     scroll.current.line = -1
     onLayout(map, offset)
@@ -145,7 +145,7 @@ export function FlowView({
     const width = last.offsetLeft + last.offsetWidth - first.offsetLeft + padX * 2
     const height = first.offsetHeight + padY * 2
     marker.style.transition = glide
-      ? `transform ${glideMs}ms var(--ease-glide), width ${glideMs}ms var(--ease-glide)`
+      ? `transform ${glideMs}ms var(--pc-ease-glide), width ${glideMs}ms var(--pc-ease-glide)`
       : 'none'
     marker.style.transform = `translate3d(${x}px, ${y}px, 0)`
     marker.style.width = `${width}px`
@@ -155,7 +155,7 @@ export function FlowView({
     // Toggle only the words whose read state changed, since long texts have tens of thousands of spans.
     const from = Math.min(readUpTo.current, start)
     const to = Math.max(readUpTo.current, start)
-    for (let i = from; i < to; i++) spans.current[i]?.classList.toggle('is-read', i < start)
+    for (let i = from; i < to; i++) spans.current[i]?.classList.toggle('pc-is-read', i < start)
     readUpTo.current = start
 
     if (line !== scroll.current.line) {
@@ -183,22 +183,22 @@ export function FlowView({
   }, [onUserScroll])
 
   return (
-    <div className="flow-stage" ref={stageRef} data-playing={playing || undefined}>
-      <div className="flow-viewport" ref={viewportRef}>
+    <div className="pc-flow-stage" ref={stageRef} data-playing={playing || undefined}>
+      <div className="pc-flow-viewport" ref={viewportRef}>
         <div
-          className="flow-content"
+          className="pc-flow-content"
           ref={contentRef}
           onClick={(e) => {
-            const target = (e.target as HTMLElement).closest<HTMLElement>('.w')
+            const target = (e.target as HTMLElement).closest<HTMLElement>('.pc-w')
             if (target?.dataset.i) onJump(Number(target.dataset.i))
           }}
         >
-          <div className="marker" ref={markerRef} aria-hidden />
+          <div className="pc-marker" ref={markerRef} aria-hidden />
           <Paragraphs doc={doc} start={section.start} end={section.end} />
         </div>
       </div>
-      <div className="flow-fade flow-fade-above" aria-hidden />
-      <div className="flow-fade flow-fade-below" aria-hidden />
+      <div className="pc-flow-fade pc-flow-fade-above" aria-hidden />
+      <div className="pc-flow-fade pc-flow-fade-below" aria-hidden />
     </div>
   )
 }

@@ -6,6 +6,8 @@ import { useDismiss } from '../lib/useDismiss'
 interface SettingsPanelProps {
   settings: Settings
   update: (patch: Partial<Settings>) => void
+  canExit: boolean
+  showTheme: boolean
   onClose: () => void
 }
 
@@ -28,12 +30,12 @@ function Choices<T extends string | number>({
   onChange: (value: T) => void
 }) {
   return (
-    <div className="setting">
-      <div className="setting-text">
-        <span className="setting-label">{label}</span>
-        {hint ? <span className="setting-hint">{hint}</span> : null}
+    <div className="pc-setting">
+      <div className="pc-setting-text">
+        <span className="pc-setting-label">{label}</span>
+        {hint ? <span className="pc-setting-hint">{hint}</span> : null}
       </div>
-      <div className="segmented segmented-sm" role="radiogroup" aria-label={label}>
+      <div className="pc-segmented pc-segmented-sm" role="radiogroup" aria-label={label}>
         {choices.map((c) => (
           <button
             key={String(c.value)}
@@ -50,13 +52,13 @@ function Choices<T extends string | number>({
   )
 }
 
-const SHORTCUTS: [string, string][] = [
+const shortcuts = (canExit: boolean): [string, string][] => [
   ['Space', 'Play or pause'],
   ['← →', 'Back or forward one word'],
   ['⇧← ⇧→', 'Back or forward one sentence'],
   ['↑ ↓', 'Faster or slower'],
   ['F', 'Switch between Flow and Focus'],
-  ['Esc', 'Pause, then back to your text'],
+  ['Esc', canExit ? 'Pause, then go back' : 'Pause'],
 ]
 
 const ON_OFF: Choice<'on' | 'off'>[] = [
@@ -64,12 +66,12 @@ const ON_OFF: Choice<'on' | 'off'>[] = [
   { value: 'off', label: 'Off' },
 ]
 
-export function SettingsPanel({ settings, update, onClose }: SettingsPanelProps) {
+export function SettingsPanel({ settings, update, canExit, showTheme, onClose }: SettingsPanelProps) {
   const ref = useRef<HTMLDivElement>(null)
   useDismiss(ref, onClose)
 
   return (
-    <div className="popover settings" ref={ref} role="dialog" aria-label="Reading settings">
+    <div className="pc-popover pc-settings" ref={ref} role="dialog" aria-label="Reading settings">
       <Choices<ChunkSize>
         label="Words at a time"
         hint={settings.chunk === 'phrase' ? 'Small words ride with the next word' : undefined}
@@ -105,19 +107,21 @@ export function SettingsPanel({ settings, update, onClose }: SettingsPanelProps)
         ]}
         onChange={(size) => update({ size })}
       />
-      <Choices<Theme>
-        label="Theme"
-        value={settings.theme}
-        choices={[
-          { value: 'system', label: 'Auto' },
-          { value: 'light', label: 'Light' },
-          { value: 'dark', label: 'Dark' },
-        ]}
-        onChange={(theme) => update({ theme })}
-      />
+      {showTheme ? (
+        <Choices<Theme>
+          label="Theme"
+          value={settings.theme}
+          choices={[
+            { value: 'system', label: 'Auto' },
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+          ]}
+          onChange={(theme) => update({ theme })}
+        />
+      ) : null}
 
-      <dl className="shortcuts">
-        {SHORTCUTS.map(([keys, action]) => (
+      <dl className="pc-shortcuts">
+        {shortcuts(canExit).map(([keys, action]) => (
           <div key={keys}>
             <dt>
               {keys.split(' ').map((k) => (

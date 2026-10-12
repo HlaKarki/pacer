@@ -16,13 +16,6 @@ export function parseFrequency(raw: string): FrequencyMap {
   return map
 }
 
-let pending: Promise<FrequencyMap> | null = null
-
-export function loadFrequency(): Promise<FrequencyMap> {
-  pending ??= import('../data/frequency.txt?raw').then((m) => parseFrequency(m.default))
-  return pending
-}
-
 function lookup(freq: FrequencyMap, part: string): number {
   // SUBTLEX splits contractions at the apostrophe, so "don't" is counted under "don".
   const head = part.split(/['’]/)[0]

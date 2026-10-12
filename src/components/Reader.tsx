@@ -26,7 +26,12 @@ interface ReaderProps {
   setIndex: (index: number) => void
   settings: Settings
   update: (patch: Partial<Settings>) => void
-  onEdit: () => void
+  /** Without it there is no back button and Esc only pauses. */
+  onExit?: () => void
+  exitLabel?: string
+  /** Where key presses are heard, so a host with several panes can keep keys inside its own. */
+  keyTarget?: EventTarget
+  showTheme?: boolean
 }
 
 const clampWpm = (wpm: number) => Math.min(WPM_MAX, Math.max(WPM_MIN, wpm))
@@ -34,7 +39,19 @@ const clampWpm = (wpm: number) => Math.min(WPM_MAX, Math.max(WPM_MIN, wpm))
 // Keeps a button from taking focus on click, so Space keeps meaning play/pause.
 const noFocus = (e: React.MouseEvent) => e.preventDefault()
 
-export function Reader({ doc, title, prefix, index, setIndex, settings, update, onEdit }: ReaderProps) {
+export function Reader({
+  doc,
+  title,
+  prefix,
+  index,
+  setIndex,
+  settings,
+  update,
+  onExit,
+  exitLabel = 'Text',
+  keyTarget = window,
+  showTheme = true,
+}: ReaderProps) {
   const [playing, setPlaying] = useState(false)
   const [layout, setLayout] = useState<{ lines: Int32Array; offset: number } | null>(null)
   const [panel, setPanel] = useState<'settings' | 'contents' | null>(null)
@@ -104,7 +121,8 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
   const setWpm = useCallback((wpm: number) => update({ wpm: clampWpm(wpm) }), [update])
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const onKey = (event: Event) => {
+      const e = event as KeyboardEvent
       const target = e.target as HTMLElement
       if (target.closest('input, textarea, select')) return
       if (e.metaKey || e.ctrlKey) return
@@ -140,13 +158,13 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
         case 'Escape':
           if (panel) setPanel(null)
           else if (playing) setPlaying(false)
-          else onEdit()
+          else onExit?.()
           break
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [toggle, prevSentence, nextSentence, jump, setWpm, update, onEdit, index, chunk.end, settings, panel, playing])
+    keyTarget.addEventListener('keydown', onKey)
+    return () => keyTarget.removeEventListener('keydown', onKey)
+  }, [keyTarget, toggle, prevSentence, nextSentence, jump, setWpm, update, onExit, index, chunk.end, settings, panel, playing])
 
   useEffect(() => {
     if (!playing || !window.matchMedia('(hover: hover)').matches) return
@@ -168,14 +186,18 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
   const progress = total > 1 ? index / (total - 1) : 0
 
   return (
-    <div className="reader" data-idle={idle || undefined} data-size={settings.size}>
-      <header className="reader-bar reader-top">
-        <button type="button" className="btn btn-quiet" onMouseDown={noFocus} onClick={onEdit}>
-          <ArrowLeft size={16} aria-hidden />
-          <span>Text</span>
-        </button>
+    <div className="pc-reader" data-idle={idle || undefined} data-size={settings.size}>
+      <header className="pc-reader-bar pc-reader-top">
+        {onExit ? (
+          <button type="button" className="pc-btn pc-btn-quiet" onMouseDown={noFocus} onClick={onExit}>
+            <ArrowLeft size={16} aria-hidden />
+            <span>{exitLabel}</span>
+          </button>
+        ) : (
+          <span />
+        )}
 
-        <div className="segmented" role="radiogroup" aria-label="Reading mode">
+        <div className="pc-segmented" role="radiogroup" aria-label="Reading mode">
           {(['flow', 'focus'] as const).map((mode) => (
             <button
               key={mode}
@@ -190,12 +212,12 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
           ))}
         </div>
 
-        <div className="top-actions">
+        <div className="pc-top-actions">
           {chapters.length > 1 ? (
-            <div className="popover-anchor">
+            <div className="pc-popover-anchor">
               <button
                 type="button"
-                className="icon-btn"
+                className="pc-icon-btn"
                 aria-label="Contents"
                 aria-expanded={panel === 'contents'}
                 onMouseDown={noFocus}
@@ -217,10 +239,10 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
               ) : null}
             </div>
           ) : null}
-          <div className="popover-anchor">
+          <div className="pc-popover-anchor">
             <button
               type="button"
-              className="icon-btn"
+              className="pc-icon-btn"
               aria-label="Reading settings"
               aria-expanded={panel === 'settings'}
               onMouseDown={noFocus}
@@ -229,13 +251,19 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
               <SlidersHorizontal size={18} aria-hidden />
             </button>
             {panel === 'settings' ? (
-              <SettingsPanel settings={settings} update={update} onClose={() => setPanel(null)} />
+              <SettingsPanel
+                settings={settings}
+                update={update}
+                canExit={onExit !== undefined}
+                showTheme={showTheme}
+                onClose={() => setPanel(null)}
+              />
             ) : null}
           </div>
         </div>
       </header>
 
-      <main className="reader-body">
+      <main className="pc-reader-body">
         {settings.mode === 'flow' ? (
           <FlowView
             doc={doc}
@@ -252,9 +280,9 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
         )}
       </main>
 
-      <footer className="reader-bar reader-bottom">
+      <footer className="pc-reader-bar pc-reader-bottom">
         <div
-          className="progress"
+          className="pc-progress"
           role="slider"
           aria-label="Position"
           aria-valuemin={0}
@@ -265,26 +293,26 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
             jump(Math.round(((e.clientX - rect.left) / rect.width) * (total - 1)))
           }}
         >
-          <div className="progress-fill" style={{ transform: `scaleX(${progress})` }} />
+          <div className="pc-progress-fill" style={{ transform: `scaleX(${progress})` }} />
         </div>
 
-        <div className="transport">
-          <div className="wpm">
+        <div className="pc-transport">
+          <div className="pc-wpm">
             <button
               type="button"
-              className="icon-btn icon-btn-sm"
+              className="pc-icon-btn pc-icon-btn-sm"
               aria-label="Slower"
               onMouseDown={noFocus}
               onClick={() => setWpm(settings.wpm - WPM_STEP)}
             >
               <Minus size={15} aria-hidden />
             </button>
-            <span className="wpm-value">
+            <span className="pc-wpm-value">
               <strong>{settings.wpm}</strong> wpm
             </span>
             <button
               type="button"
-              className="icon-btn icon-btn-sm"
+              className="pc-icon-btn pc-icon-btn-sm"
               aria-label="Faster"
               onMouseDown={noFocus}
               onClick={() => setWpm(settings.wpm + WPM_STEP)}
@@ -293,10 +321,10 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
             </button>
           </div>
 
-          <div className="transport-main">
+          <div className="pc-transport-main">
             <button
               type="button"
-              className="icon-btn"
+              className="pc-icon-btn"
               aria-label="Previous sentence"
               onMouseDown={noFocus}
               onClick={prevSentence}
@@ -305,7 +333,7 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
             </button>
             <button
               type="button"
-              className="play-btn"
+              className="pc-play-btn"
               aria-label={playing ? 'Pause' : 'Play'}
               onMouseDown={noFocus}
               onClick={toggle}
@@ -314,7 +342,7 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
             </button>
             <button
               type="button"
-              className="icon-btn"
+              className="pc-icon-btn"
               aria-label="Next sentence"
               onMouseDown={noFocus}
               onClick={nextSentence}
@@ -323,7 +351,7 @@ export function Reader({ doc, title, prefix, index, setIndex, settings, update, 
             </button>
           </div>
 
-          <p className="time-left">{formatDuration(remaining)} left</p>
+          <p className="pc-time-left">{formatDuration(remaining)} left</p>
         </div>
       </footer>
     </div>

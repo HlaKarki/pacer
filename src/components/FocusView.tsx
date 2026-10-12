@@ -33,10 +33,10 @@ export function FocusView({ doc, chunk, onJump }: FocusViewProps) {
   const renderRange = (start: number, end: number) =>
     words.slice(start, end).map((w, j) => {
       const i = start + j
-      const state = i < chunk.start ? 'is-read' : i < chunk.end ? 'is-now' : ''
+      const state = i < chunk.start ? 'pc-is-read' : i < chunk.end ? 'pc-is-now' : ''
       return (
         <span key={i}>
-          <button type="button" className={`cw ${state}`} onClick={() => onJump(i)} tabIndex={-1}>
+          <button type="button" className={`pc-cw ${state}`} onClick={() => onJump(i)} tabIndex={-1}>
             {w.text}
           </button>{' '}
         </span>
@@ -44,26 +44,26 @@ export function FocusView({ doc, chunk, onJump }: FocusViewProps) {
     })
 
   return (
-    <div className="focus">
-      <div className="focus-reticle">
-        <div className="focus-word" aria-live="off">
-          <span className="focus-left">{left}</span>
-          <span className="focus-pivot">{pivot}</span>
-          <span className="focus-right">{right}</span>
+    <div className="pc-focus">
+      <div className="pc-focus-reticle">
+        <div className="pc-focus-word" aria-live="off">
+          <span className="pc-focus-left">{left}</span>
+          <span className="pc-focus-pivot">{pivot}</span>
+          <span className="pc-focus-right">{right}</span>
         </div>
       </div>
 
-      <div className="focus-context">
+      <div className="pc-focus-context">
         {previous && words[previous.start].para === words[current.start].para ? (
-          <p className="focus-prev">
-            {previous.end - previous.start > CONTEXT_RADIUS ? <span className="cw-gap">… </span> : null}
+          <p className="pc-focus-prev">
+            {previous.end - previous.start > CONTEXT_RADIUS ? <span className="pc-cw-gap">… </span> : null}
             {renderRange(Math.max(previous.start, previous.end - CONTEXT_RADIUS), previous.end)}
           </p>
         ) : null}
-        <p className="focus-current">
-          {from > current.start ? <span className="cw-gap">… </span> : null}
+        <p className="pc-focus-current">
+          {from > current.start ? <span className="pc-cw-gap">… </span> : null}
           {renderRange(from, to)}
-          {to < current.end ? <span className="cw-gap">…</span> : null}
+          {to < current.end ? <span className="pc-cw-gap">…</span> : null}
         </p>
       </div>
     </div>

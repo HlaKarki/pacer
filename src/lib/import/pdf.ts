@@ -8,17 +8,16 @@ const isHorizontal = (t: number[]) => t[0] > 0 && Math.abs(t[1]) <= t[0] * 0.05
 // Authoring tools often leave their own file name or a placeholder in the Title field.
 const JUNK_TITLE = /^(untitled|microsoft word\b|.*\.(docx?|pdf|tex|indd|pages)$)/i
 
+export type PdfJs = typeof import('pdfjs-dist')
+
+/** Callers pass their pdf.js loader, so a host that ships its own copy can reuse it. */
 export async function extractPdf(
   data: ArrayBuffer,
   onProgress: (message: string) => void,
   isWord: (w: string) => boolean,
+  loadPdf: () => Promise<PdfJs>,
 ): Promise<Imported> {
-  const [pdfjs, worker] = await Promise.all([
-    import('pdfjs-dist'),
-    import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
-  ])
-  pdfjs.GlobalWorkerOptions.workerSrc = worker.default
-
+  const pdfjs = await loadPdf()
   const task = pdfjs.getDocument({ data: new Uint8Array(data) })
   let doc
   try {

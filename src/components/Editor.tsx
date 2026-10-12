@@ -54,7 +54,7 @@ export function Editor({ text, title, onChange, onImport, wpm, prefix, progress,
 
   return (
     <div
-      className="editor"
+      className="pc-editor"
       data-dragging={dragging || undefined}
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes('Files')) return
@@ -70,18 +70,18 @@ export function Editor({ text, title, onChange, onImport, wpm, prefix, progress,
         open(e.dataTransfer.files[0])
       }}
     >
-      <header className="editor-head">
-        <span className="wordmark">Pacer</span>
+      <header className="pc-editor-head">
+        <span className="pc-wordmark">Pacer</span>
       </header>
 
-      <main className="editor-main">
-        <p className="editor-intro">
+      <main className="pc-editor-main">
+        <p className="pc-editor-intro">
           Paste something long or open a PDF or EPUB. Pacer moves a highlighter through it at your
           pace, and the words around it stay on the page.
         </p>
 
         <textarea
-          className="editor-input"
+          className="pc-editor-input"
           value={text}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Paste an article, a chapter, or notes you need to get through."
@@ -90,15 +90,15 @@ export function Editor({ text, title, onChange, onImport, wpm, prefix, progress,
           autoFocus
         />
 
-        <div className="editor-foot">
+        <div className="pc-editor-foot">
           <p
-            className="editor-count"
+            className="pc-editor-count"
             data-state={importState.kind}
             role={importState.kind === 'error' ? 'alert' : 'status'}
           >
             {status}
           </p>
-          <div className="editor-actions">
+          <div className="pc-editor-actions">
             <input
               ref={fileInput}
               type="file"
@@ -109,22 +109,22 @@ export function Editor({ text, title, onChange, onImport, wpm, prefix, progress,
                 e.target.value = ''
               }}
             />
-            <button type="button" className="btn" disabled={busy} onClick={() => fileInput.current?.click()}>
+            <button type="button" className="pc-btn" disabled={busy} onClick={() => fileInput.current?.click()}>
               <FileUp size={16} aria-hidden />
               Open file
             </button>
             {words === 0 ? (
-              <button type="button" className="btn" disabled={busy} onClick={() => onChange(SAMPLE)}>
+              <button type="button" className="pc-btn" disabled={busy} onClick={() => onChange(SAMPLE)}>
                 Try a sample
               </button>
             ) : canResume ? (
-              <button type="button" className="btn" disabled={busy} onClick={() => onStart(true)}>
+              <button type="button" className="pc-btn" disabled={busy} onClick={() => onStart(true)}>
                 Start over
               </button>
             ) : null}
             <button
               type="button"
-              className="btn btn-primary"
+              className="pc-btn pc-btn-primary"
               disabled={words === 0 || busy}
               onClick={() => onStart(false)}
             >
@@ -134,7 +134,7 @@ export function Editor({ text, title, onChange, onImport, wpm, prefix, progress,
         </div>
       </main>
 
-      <div className="drop-hint" aria-hidden>
+      <div className="pc-drop-hint" aria-hidden>
         <p>Drop to open</p>
         <span>PDF, EPUB or plain text</span>
       </div>

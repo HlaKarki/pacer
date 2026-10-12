@@ -1,5 +1,7 @@
-import { loadFrequency } from '../frequency'
+import { loadFrequency } from '../frequency-web'
 import { ImportError, type Imported } from './errors'
+import type { PdfJs } from './pdf'
+import { withTitle } from './title'
 
 export { ImportError, type Imported }
 
@@ -7,15 +9,14 @@ export const ACCEPT = '.pdf,.epub,.txt,.md,application/pdf,application/epub+zip,
 
 const baseName = (name: string) => name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
 
-function firstHeading(text: string): string | null {
-  const head = text.split(/\n\s*\n/, 12).find((p) => /^#{1,2} /.test(p))
-  return head ? head.replace(/^#{1,2} /, '').trim() : null
+async function loadPdfjsDist(): Promise<PdfJs> {
+  const [pdfjs, worker] = await Promise.all([
+    import('pdfjs-dist'),
+    import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+  ])
+  pdfjs.GlobalWorkerOptions.workerSrc = worker.default
+  return pdfjs
 }
-
-const withTitle = (result: Imported, fallback: string | null): Imported => ({
-  ...result,
-  title: result.title ?? firstHeading(result.text) ?? fallback,
-})
 
 export async function importFile(
   file: File,
@@ -31,7 +32,7 @@ export async function importFile(
       loadFrequency(),
       file.arrayBuffer(),
     ])
-    return withTitle(await extractPdf(data, onProgress, (w) => freq.has(w)), fallbackTitle)
+    return withTitle(await extractPdf(data, onProgress, (w) => freq.has(w), loadPdfjsDist), fallbackTitle)
   }
 
   if (name.endsWith('.epub') || file.type === 'application/epub+zip') {

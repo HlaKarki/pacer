@@ -1,7 +1,8 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { Editor } from './components/Editor'
 import { Reader } from './components/Reader'
-import { loadFrequency, type FrequencyMap } from './lib/frequency'
+import type { FrequencyMap } from './lib/frequency'
+import { loadFrequency } from './lib/frequency-web'
 import { parse } from './lib/text'
 import { usePersisted, useSettings } from './lib/storage'
 import { weightPrefix } from './lib/timing'
@@ -78,7 +79,7 @@ export default function App() {
       setIndex={setIndex}
       settings={settings}
       update={update}
-      onEdit={() => setScreen('edit')}
+      onExit={() => setScreen('edit')}
     />
   )
 }
