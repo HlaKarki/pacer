@@ -1,0 +1,364 @@
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test'
+import { Window } from 'happy-dom'
+import { parse } from '../../src/lib/text'
+import { InPageSession, type BarActions, type BarState, type SessionOptions, type ToggleResult } from './session'
+
+const window = new Window({ url: 'https://example.com/essay#intro' })
+globalThis.Node = window.Node as unknown as typeof Node
+const document = window.document as unknown as Document
+const win = window as unknown as Window
+const RangeProto = window.Range.prototype as unknown as Range
+const root = document.documentElement
+const HEIGHT = 800
+const LINE = 20
+const CHARS_PER_LINE = 60
+const KEY = 'place:https://example.com/essay'
+
+const para = (n: number) =>
+  `Paragraph ${n} opens with its number, and then it keeps going long enough that a reader-view parser treats it as body text worth keeping in the article.`
+const PARAGRAPHS = 12
+const topOfPara = (n: number) => 100 + (n - 1) * 200
+
+// happy-dom has no layout, so each block carries its page top in data-top and wraps every 60 characters.
+const hiddenParas = new Set<number>()
+const lineTop = (node: Node, offset: number) => {
+  const block = (node.parentElement as HTMLElement).closest<HTMLElement>('[data-top]')
+  return Number(block?.dataset.top ?? 0) + Math.floor(offset / CHARS_PER_LINE) * LINE - root.scrollTop
+}
+const paraOf = (node: Node) => Number((node.parentElement as HTMLElement).closest<HTMLElement>('[data-para]')?.dataset.para ?? -1)
+const rect = (top: number, bottom: number) => ({ top, bottom, height: bottom - top, left: 0, right: 100, width: 100 }) as DOMRect
+
+class FakeHighlight extends Set<Range> {
+  priority = 0
+  constructor(...ranges: Range[]) {
+    super(ranges)
+  }
+}
+
+type Listener = (changes: Record<string, { newValue?: unknown }>, area: string) => void
+let data: Record<string, unknown>
+let writes: Record<string, unknown>[]
+let listeners: Set<Listener>
+let registry: Map<string, FakeHighlight>
+let frames: FrameRequestCallback[]
+let covering: (y: number) => boolean
+
+function page(extra = '') {
+  document.title = 'How Eyes Read'
+  const paras = Array.from({ length: PARAGRAPHS }, (_, k) => {
+    const n = k + 1
+    return `<p data-top="${topOfPara(n)}" data-para="${n}">${para(n)}</p>`
+  }).join('')
+  document.body.innerHTML = `<article><h1 data-top="0">How Eyes Read</h1>${paras}</article><div id="wall"></div>${extra}`
+}
+
+beforeEach(() => {
+  data = {}
+  writes = []
+  listeners = new Set()
+  registry = new Map()
+  frames = []
+  covering = () => false
+  hiddenParas.clear()
+  Object.assign(globalThis, {
+    chrome: {
+      runtime: { id: 'pacer' },
+      storage: {
+        local: {
+          get: async (key: string) => ({ [key]: data[key] }),
+          set: async (entries: Record<string, unknown>) => {
+            writes.push(entries)
+            Object.assign(data, entries)
+          },
+        },
+        onChanged: {
+          addListener: (listener: Listener) => listeners.add(listener),
+          removeListener: (listener: Listener) => listeners.delete(listener),
+        },
+      },
+    },
+    CSS: { highlights: registry },
+    Highlight: FakeHighlight,
+  })
+  Object.defineProperty(window, 'innerHeight', { value: HEIGHT, configurable: true })
+  Object.defineProperty(root, 'scrollHeight', { value: 10000, configurable: true })
+  Object.defineProperty(root, 'clientHeight', { value: HEIGHT, configurable: true })
+  root.scrollTop = 0
+  win.requestAnimationFrame = (callback) => frames.push(callback)
+  win.cancelAnimationFrame = () => {}
+  win.matchMedia = () => ({ matches: true }) as MediaQueryList
+  document.elementsFromPoint = (_x, y) => [covering(y) ? document.getElementById('wall')! : document.body]
+  RangeProto.getClientRects = function (this: Range) {
+    if (hiddenParas.has(paraOf(this.startContainer))) return [] as unknown as DOMRectList
+    const top = lineTop(this.startContainer, this.startOffset)
+    return [rect(top, top + LINE)] as unknown as DOMRectList
+  }
+  RangeProto.getBoundingClientRect = function (this: Range) {
+    return rect(lineTop(this.startContainer, this.startOffset), lineTop(this.endContainer, Math.max(0, this.endOffset - 1)) + LINE)
+  }
+  jest.useFakeTimers()
+})
+
+afterEach(() => {
+  jest.useRealTimers()
+  for (const name of ['getClientRects', 'getBoundingClientRect'] as const) delete (RangeProto as Partial<Range>)[name]
+  for (const name of ['chrome', 'CSS', 'Highlight']) Reflect.deleteProperty(globalThis, name)
+})
+
+const flush = async () => {
+  for (let k = 0; k < 30; k++) await Promise.resolve()
+}
+const runFrames = () => {
+  const due = frames
+  frames = []
+  for (const callback of due) callback(0)
+}
+const advance = async (ms: number) => {
+  jest.advanceTimersByTime(ms)
+  await flush()
+}
+
+function fakeBar() {
+  const bar = { states: [] as BarState[], notices: [] as string[], disposed: false, actions: null as BarActions | null }
+  const mountBar = (actions: BarActions) => {
+    bar.actions = actions
+    return {
+      render: (state: BarState) => void bar.states.push(state),
+      notice: (text: string) => void bar.notices.push(text),
+      dispose: () => void (bar.disposed = true),
+    }
+  }
+  return { bar, mountBar }
+}
+
+async function begin(options: SessionOptions = {}) {
+  const { bar, mountBar } = fakeBar()
+  let ended = 0
+  const session = new InPageSession({ win, mountBar, ended: () => ended++, ...options })
+  let result: ToggleResult | undefined
+  let failure: unknown
+  session.start().then(
+    (r) => (result = r),
+    (e) => (failure = e),
+  )
+  for (let k = 0; k < 20 && !result && !failure; k++) await advance(100)
+  if (failure) throw failure
+  return { session, result: result!, bar, ended: () => ended }
+}
+
+const SR_ONLY = ' <span style="overflow: hidden; width: 1px; height: 1px">Skip to content.</span>'
+
+const nowRange = () => [...(registry.get('pacer-now-light') ?? [])].find((r) => !r.collapsed)
+const nowText = () => String(nowRange() ?? '')
+const nowPara = () => paraOf(nowRange()!.startContainer)
+const readText = () => [...(registry.get('pacer-read-light') ?? [])].map(String).join('|')
+const lastState = (bar: { states: BarState[] }) => bar.states.at(-1)!
+const docOf = (session: InPageSession) => parse(session.article!.text)
+
+describe('InPageSession', () => {
+  test('starts at the paragraph in view, highlights it and scrolls its line to the band', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, result, bar } = await begin()
+    expect(result).toEqual({ kind: 'started' })
+    expect(bar.notices).toEqual(['Reading page'])
+    expect(nowText()).toBe('Paragraph')
+    expect(nowPara()).toBe(6)
+    expect(root.scrollTop).toBeCloseTo(topOfPara(6) - HEIGHT * 0.36, 6)
+    expect(lastState(bar)).toMatchObject({ playing: true, wpm: 300, chunk: 1, notice: null })
+    expect(session.playing).toBe(true)
+    session.dispose()
+  })
+
+  test('paces on through the paragraph, dims what it read and saves the place while playing', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session } = await begin()
+    const start = docOf(session).paragraphs[6].start
+    await advance(1500)
+    expect(nowPara()).toBe(6)
+    expect(nowText()).not.toBe('Paragraph')
+    expect(para(6).startsWith(`${readText()} ${nowText()}`)).toBe(true)
+    const saved = data[KEY] as { index: number; from: number }
+    expect(saved.from).toBe(6)
+    expect(saved.index).toBeGreaterThan(start)
+    session.dispose()
+  })
+
+  test('never highlights words the page hides', async () => {
+    page()
+    document.querySelector('[data-para="1"]')!.insertAdjacentHTML('beforeend', SR_ONLY)
+    const { session, bar } = await begin()
+    await advance(12000)
+    const doc = docOf(session)
+    const n = doc.words.length
+    const shown = new Set(bar.states.map((state) => Math.round(state.progress * (n - 1))))
+    const end = doc.paragraphs[1].end
+    const hidden = [end - 3, end - 2, end - 1]
+    expect(hidden.map((i) => doc.words[i].text)).toEqual(['Skip', 'to', 'content.'])
+    expect(hidden.filter((i) => shown.has(i))).toEqual([])
+    expect(shown.has(end - 4)).toBe(true)
+    expect(shown.has(end)).toBe(true)
+    session.dispose()
+  })
+
+  test('hands the article to the reader tab when the page shows too little of it', async () => {
+    page()
+    for (const p of document.querySelectorAll('article p')) (p as HTMLElement).style.cssText = 'opacity: 0'
+    const { result, bar, ended } = await begin()
+    expect(result.kind).toBe('fallback')
+    if (result.kind !== 'fallback') return
+    expect(result.coverage).toBeLessThan(0.85)
+    expect(result.article.title).toBe('How Eyes Read')
+    expect(result.article.startParagraph).toBe(0)
+    expect(result.article.text).toContain('Paragraph 12 opens')
+    expect(bar.disposed).toBe(true)
+    expect(registry.size).toBe(0)
+    expect(listeners.size).toBe(0)
+    expect(ended()).toBe(1)
+  })
+
+  test('stops quietly when the extension goes away while it starts', async () => {
+    page()
+    ;(globalThis as unknown as { chrome: { runtime: object } }).chrome.runtime = {}
+    const { result, bar } = await begin()
+    expect(result).toEqual({ kind: 'stopped' })
+    expect(bar.disposed).toBe(true)
+    expect(listeners.size).toBe(0)
+  })
+
+  test('skips two covered blocks and then pauses with the tab on offer', async () => {
+    page()
+    root.scrollTop = 1000
+    covering = () => true
+    const { session, bar } = await begin()
+    runFrames()
+    expect(nowPara()).toBe(7)
+    runFrames()
+    expect(nowPara()).toBe(8)
+    expect(session.playing).toBe(true)
+    runFrames()
+    expect(session.playing).toBe(false)
+    expect(lastState(bar).notice).toEqual({ text: 'Something on the page covers the text', action: 'openTab' })
+  })
+
+  test('reads on after one covered caption', async () => {
+    page()
+    root.scrollTop = 1000
+    covering = () => nowPara() === 6
+    const { session } = await begin()
+    runFrames()
+    expect(nowPara()).toBe(7)
+    runFrames()
+    expect(nowPara()).toBe(7)
+    expect(session.playing).toBe(true)
+    session.dispose()
+  })
+
+  test('pauses when the next paragraph has no box on screen', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session, bar } = await begin()
+    hiddenParas.add(7)
+    session.jump(docOf(session).paragraphs[7].start)
+    expect(session.playing).toBe(false)
+    expect(lastState(bar).notice).toEqual({ text: 'Pacer lost its place', action: 'openTab' })
+    session.dispose()
+  })
+
+  test('stops with the place saved against the paragraph in view and resumes that word next time', async () => {
+    page()
+    root.scrollTop = 1000
+    const first = await begin()
+    await advance(1500)
+    const word = nowText()
+    const offset = nowRange()!.startOffset
+    const writesBefore = writes.length
+    const { index, from } = await first.session.stop('esc')
+    expect(data[KEY]).toEqual({ index, words: docOf(first.session).words.length, from })
+    expect(writes.length).toBe(writesBefore + 1)
+    expect(registry.size).toBe(0)
+    expect(listeners.size).toBe(0)
+    expect(first.bar.disposed).toBe(true)
+    expect(first.ended()).toBe(1)
+    const states = first.bar.states.length
+    await advance(3000)
+    expect(first.bar.states.length).toBe(states)
+
+    const second = await begin()
+    expect([nowText(), nowRange()!.startOffset, nowPara()]).toEqual([word, offset, 6])
+    second.session.dispose()
+  })
+
+  test('pauses on a wheel and picks up at the paragraph in view once the line has left the screen', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session } = await begin()
+    document.querySelector('[data-para="6"]')!.dispatchEvent(new window.WheelEvent('wheel', { bubbles: true, deltaY: 40 }) as unknown as Event)
+    expect(session.playing).toBe(false)
+    root.scrollTop = 1600
+    session.play()
+    expect(nowText()).toBe('Paragraph')
+    expect(nowPara()).toBe(9)
+    await advance(1000)
+    expect((data[KEY] as { from: number }).from).toBe(9)
+    session.dispose()
+  })
+
+  test('carries on from the same word when the line is still on screen after a wheel', async () => {
+    page()
+    root.scrollTop = 1000
+    const { session } = await begin()
+    await advance(1000)
+    const word = nowText()
+    document.querySelector('[data-para="6"]')!.dispatchEvent(new window.WheelEvent('wheel', { bubbles: true, deltaY: 40 }) as unknown as Event)
+    root.scrollTop += 100
+    session.play()
+    expect(nowText()).toBe(word)
+    expect(nowPara()).toBe(6)
+    session.dispose()
+  })
+
+  test('pauses at the end with Read on, and play starts over from the top', async () => {
+    page()
+    const { session, bar } = await begin()
+    session.seek(1)
+    expect(nowText()).toBe('article.')
+    await advance(2000)
+    expect(session.playing).toBe(false)
+    expect(lastState(bar).notice).toEqual({ text: 'End of the page', action: 'readOn' })
+    session.play()
+    expect(nowText()).toBe('How')
+    session.dispose()
+  })
+
+  test('moves by word and sentence, skipping hidden words on the way back', async () => {
+    page()
+    document.querySelector('[data-para="1"]')!.insertAdjacentHTML('beforeend', SR_ONLY)
+    const { session } = await begin()
+    session.pause()
+    const doc = docOf(session)
+    const after = doc.paragraphs[2].start
+    session.jump(after)
+    session.prevWord()
+    expect(nowText()).toBe('article.')
+    session.nextChunk()
+    expect(nowText()).toBe('Paragraph')
+    expect(nowPara()).toBe(2)
+    session.nextSentence()
+    expect(nowPara()).toBe(3)
+    session.dispose()
+  })
+
+  test('changes speed and chunk size through the shared settings', async () => {
+    page()
+    const { session, bar } = await begin()
+    bar.actions!.faster()
+    bar.actions!.cycleChunk()
+    await flush()
+    expect(data.settings).toEqual({ wpm: 325, chunk: 2 })
+    session.setWpm(5000)
+    expect((data.settings as { wpm: number }).wpm).toBe(1200)
+    session.dispose()
+  })
+})
