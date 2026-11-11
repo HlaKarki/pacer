@@ -67,7 +67,7 @@ export function Editor({ text, title, onChange, onImport, wpm, prefix, progress,
       onDrop={(e) => {
         e.preventDefault()
         setDragging(false)
-        open(e.dataTransfer.files[0])
+        void open(e.dataTransfer.files[0])
       }}
     >
       <header className="pc-editor-head">
@@ -105,7 +105,7 @@ export function Editor({ text, title, onChange, onImport, wpm, prefix, progress,
               accept={ACCEPT}
               hidden
               onChange={(e) => {
-                open(e.target.files?.[0])
+                void open(e.target.files?.[0])
                 e.target.value = ''
               }}
             />

@@ -134,7 +134,7 @@ export function FlowView({
     const observer = new ResizeObserver(() => measure())
     if (contentRef.current) observer.observe(contentRef.current)
     if (viewportRef.current) observer.observe(viewportRef.current)
-    document.fonts?.ready.then(() => measure())
+    void document.fonts?.ready.then(() => measure())
     return () => observer.disconnect()
   }, [measure, doc, section.end])
 

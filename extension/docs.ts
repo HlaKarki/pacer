@@ -28,15 +28,15 @@ function open(): Promise<IDBDatabase> {
       request.result.createObjectStore(STORE, { keyPath: 'id' }).createIndex('at', 'at')
     }
     request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
+    request.onerror = () => reject(request.error ?? new Error('IndexedDB could not open the Pacer store'))
   })
 }
 
 function done(tx: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-    tx.onabort = () => reject(tx.error)
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB transaction failed'))
+    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'))
   })
 }
 
@@ -66,7 +66,7 @@ export async function getDoc(id: string): Promise<DocRecord | null> {
     const request = db.transaction(STORE).objectStore(STORE).get(id)
     return await new Promise((resolve, reject) => {
       request.onsuccess = () => resolve((request.result as DocRecord | undefined) ?? null)
-      request.onerror = () => reject(request.error)
+      request.onerror = () => reject(request.error ?? new Error('IndexedDB read failed'))
     })
   } finally {
     db.close()

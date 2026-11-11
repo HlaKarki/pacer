@@ -236,7 +236,7 @@ export function App({ store, docId }: { store: ExtensionStore; docId: string | n
           keyTarget={window}
           exitLabel={exitLabel(screen.opened)}
           onIndex={onIndex}
-          onExit={leave}
+          onExit={() => void leave()}
           showTheme
         />
       )

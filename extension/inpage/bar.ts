@@ -607,7 +607,7 @@ export const Toast = {
     const panel = element(doc, 'div', 'panel toast', message)
     panel.setAttribute('role', 'status')
     root.append(panel)
-    toast = { host, timer: setTimeout(Toast.dismiss, TOAST_MS) }
+    toast = { host, timer: setTimeout(() => Toast.dismiss(), TOAST_MS) }
   },
 
   dismiss(): void {

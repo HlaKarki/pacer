@@ -35,7 +35,7 @@ export function removeForeign(doc: Document): void {
 async function askForTab(article: Article | null): Promise<boolean> {
   const message: OpenTabMessage = { type: 'pacer:open-tab', article }
   try {
-    const reply = (await chrome.runtime.sendMessage(message)) as { ok?: boolean } | undefined
+    const reply = await chrome.runtime.sendMessage<OpenTabMessage, { ok?: boolean } | undefined>(message)
     return reply?.ok === true
   } catch {
     return false

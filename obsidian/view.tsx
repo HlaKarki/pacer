@@ -167,7 +167,7 @@ export class PacerView extends FileView {
           keyTarget={this.rootEl}
           exitLabel={screen.exitLabel}
           onIndex={this.onIndex}
-          onExit={this.exit}
+          onExit={() => void this.exit()}
         />
       ),
     )
