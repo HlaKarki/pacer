@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pacer",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Read the PDF or article in this tab with a highlighter that moves at your pace.",
   "minimum_chrome_version": "128",
   "permissions": ["activeTab", "contextMenus", "scripting", "storage"],

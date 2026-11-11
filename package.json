@@ -1,7 +1,7 @@
 {
   "name": "pacer",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "bun test",
     "install:obsidian": "bun scripts/install-obsidian.ts",
-    "build:extension": "bun scripts/build-extension.ts"
+    "build:extension": "bun scripts/build-extension.ts",
+    "version": "bun scripts/version.ts"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",
