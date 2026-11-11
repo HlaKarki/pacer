@@ -11,6 +11,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "bun test",
+    "test:e2e": "bun install --cwd e2e-tests && bun run build:extension && bun run --cwd e2e-tests e2e",
     "install:obsidian": "bun scripts/install-obsidian.ts",
     "build:extension": "bun scripts/build-extension.ts",
     "zip:extension": "bun run build:extension && bun scripts/zip-extension.ts",

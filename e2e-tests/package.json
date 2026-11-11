@@ -1,0 +1,13 @@
+{
+  "name": "pacer-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "bun ext-e2e.ts && bun inpage-e2e.ts",
+    "smoke": "bun inpage-smoke.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "playwright": "1.64.0"
+  }
+}
