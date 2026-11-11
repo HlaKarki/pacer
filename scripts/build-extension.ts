@@ -39,6 +39,8 @@ await Promise.all([
   cp('extension/reader.html', `${OUT}/reader.html`),
   cp('extension/inpage.css', `${OUT}/inpage.css`),
   cp('extension/icons', `${OUT}/icons`, { recursive: true }),
+  cp('LICENSE', `${OUT}/LICENSE`),
+  cp('THIRD_PARTY_NOTICES.md', `${OUT}/THIRD_PARTY_NOTICES.md`),
   cp('node_modules/pdfjs-dist/build/pdf.worker.min.mjs', `${OUT}/pdf.worker.min.mjs`),
   ...FONTS.flatMap(({ css, name }) => {
     const dir = `node_modules/${css.slice(0, css.lastIndexOf('/'))}`
