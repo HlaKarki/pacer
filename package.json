@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "bun scripts/build-obsidian.ts",
+    "build:web": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "bun test",
-    "build:obsidian": "bun scripts/build-obsidian.ts",
     "install:obsidian": "bun scripts/install-obsidian.ts",
     "build:extension": "bun scripts/build-extension.ts"
   },

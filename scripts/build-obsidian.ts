@@ -1,8 +1,6 @@
-import { copyFile, mkdir } from 'node:fs/promises'
+// Obsidian's directory scan runs `build` and expects main.js and styles.css beside manifest.json at the repo root.
+const OUT = '.'
 
-const OUT = 'obsidian/dist'
-
-await mkdir(OUT, { recursive: true })
 const result = await Bun.build({
   entrypoints: ['./obsidian/main.ts'],
   outdir: OUT,
@@ -21,8 +19,7 @@ if (!result.success) {
 
 const css = await Promise.all(['src/reader.css', 'obsidian/tokens.css'].map((path) => Bun.file(path).text()))
 await Bun.write(`${OUT}/styles.css`, css.join('\n'))
-await copyFile('obsidian/manifest.json', `${OUT}/manifest.json`)
 
-for (const name of ['main.js', 'styles.css', 'manifest.json']) {
-  console.log(`${OUT}/${name}  ${(Bun.file(`${OUT}/${name}`).size / 1024).toFixed(0)} kB`)
+for (const name of ['main.js', 'styles.css']) {
+  console.log(`${name}  ${(Bun.file(name).size / 1024).toFixed(0)} kB`)
 }

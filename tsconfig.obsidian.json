@@ -20,5 +20,5 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["obsidian"],
-  "exclude": ["obsidian/**/*.test.ts", "obsidian/dist"]
+  "exclude": ["obsidian/**/*.test.ts"]
 }
