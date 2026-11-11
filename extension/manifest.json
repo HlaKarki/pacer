@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Pacer",
+  "name": "Pacer: Highlighter Speed Reader",
+  "short_name": "Pacer",
   "version": "1.0.0",
-  "description": "Read the PDF or article in this tab with a highlighter that moves at your pace.",
+  "description": "Speed read any article without leaving the page. A highlighter moves through the text at your pace. Works on PDFs too.",
   "minimum_chrome_version": "128",
   "permissions": ["activeTab", "contextMenus", "scripting", "storage"],
   "host_permissions": ["file:///*"],
