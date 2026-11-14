@@ -240,8 +240,6 @@
   height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--pc-rule) transparent;
 }
 
 .pc-root .pc-flow-content {
@@ -292,10 +290,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .pc-root .pc-flow-stage:not([data-playing]) .pc-w:hover {
-    text-decoration: underline;
-    text-decoration-color: var(--pc-muted);
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.22em;
+    box-shadow: inset 0 -1px var(--pc-muted);
   }
 }
 
@@ -429,9 +424,9 @@
   text-wrap: pretty;
 }
 
-.pc-root .pc-focus-prev {
+.pc-root .pc-focus-context .pc-focus-prev {
   color: var(--pc-muted);
-  margin-bottom: 0.5em !important;
+  margin-bottom: 0.5em;
 }
 
 .pc-root .pc-cw {

@@ -212,3 +212,8 @@ body {
   gap: 8px;
   margin-left: auto;
 }
+
+.pc-root .pc-flow-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pc-rule) transparent;
+}
