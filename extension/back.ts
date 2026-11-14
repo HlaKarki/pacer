@@ -61,7 +61,7 @@ export async function revealParagraph(source: Source, text: string): Promise<boo
     await chrome.scripting.executeScript({ target, files: ['extract.js'] })
     const [frame] = await chrome.scripting.executeScript({
       target,
-      func: (t: string) => (globalThis as unknown as { __pacerReveal: (t: string) => boolean | null }).__pacerReveal(t),
+      func: (t: string) => (window as unknown as { __pacerReveal: (t: string) => boolean | null }).__pacerReveal(t),
       args: [text],
     })
     return frame?.result ?? null

@@ -114,8 +114,8 @@ const fingerprintOf = (doc: Doc) => [doc.words.length, ...doc.words.slice(0, FIN
 // Frame callbacks run before the paint and hidden tabs get none, so wait for a timeout after the frame or 100 ms.
 const nextFrame = (win: Window) =>
   new Promise<void>((resolve) => {
-    win.requestAnimationFrame(() => setTimeout(resolve))
-    setTimeout(resolve, 100)
+    win.requestAnimationFrame(() => win.setTimeout(resolve))
+    win.setTimeout(resolve, 100)
   })
 
 interface Run {
@@ -154,7 +154,7 @@ export class InPageSession {
   private from = 0
   private chunk = { start: 0, end: 0 }
   private sincePlay = 0
-  private timer: ReturnType<typeof setTimeout> | null = null
+  private timer: number | null = null
   private lineAt = -1
   private coveredRun = 0
   private userScrolled = false
@@ -222,7 +222,7 @@ export class InPageSession {
     this.bar = this.options.mountBar(this.actions)
     this.bar.notice('Reading page')
     await nextFrame(win)
-    const store = await ExtensionStore.load()
+    const store = await ExtensionStore.load(this.win)
     this.store = store
     if (this.gone()) return this.stopped()
 
@@ -510,7 +510,7 @@ export class InPageSession {
   }
 
   private clearTimer() {
-    if (this.timer !== null) clearTimeout(this.timer)
+    if (this.timer !== null) this.win.clearTimeout(this.timer)
     this.timer = null
   }
 
@@ -538,7 +538,7 @@ export class InPageSession {
     try {
       if (!this.show(dir, scroll) || !this.isPlaying) return
       const { wpm, chunk } = this.settings()
-      this.timer = setTimeout(this.advance, chunkDelayMs(this.prefix, this.chunk, wpm, chunk, this.sincePlay))
+      this.timer = this.win.setTimeout(this.advance, chunkDelayMs(this.prefix, this.chunk, wpm, chunk, this.sincePlay))
     } catch (error) {
       console.error(error)
       this.pause(FAILED)
@@ -619,7 +619,7 @@ export class InPageSession {
   /** The page replaced the text, so map it again once the throttle allows, keeping the index where it is until then. */
   private remap(dir: 1 | -1, scroll: boolean): boolean {
     if (!this.map.canRebuild()) {
-      this.timer = setTimeout(() => {
+      this.timer = this.win.setTimeout(() => {
         this.timer = null
         this.run(dir, scroll)
       }, this.map.nextRebuildIn())

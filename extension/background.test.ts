@@ -86,7 +86,7 @@ const later = (ms = 1000) => setSystemTime((now += ms))
 const tabOf = (id: number, url = 'https://example.com/essay') => ({ id, url, index: 3, windowId: 1, title: 'Essay' }) as chrome.tabs.Tab
 
 beforeAll(async () => {
-  Object.assign(globalThis, { chrome: fakeChrome })
+  Object.assign(globalThis, { chrome: fakeChrome, window: globalThis })
   await import('./background')
   paceTab = scope.paceTab as typeof paceTab
   onMenu = scope.onMenu as typeof onMenu
@@ -94,7 +94,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   setSystemTime()
-  for (const name of ['chrome', 'paceTab', 'onMenu', 'document', 'location', '__pacerInPage', '__pacerExtract']) Reflect.deleteProperty(globalThis, name)
+  for (const name of ['chrome', 'window', 'paceTab', 'onMenu', 'document', 'location', '__pacerInPage', '__pacerExtract']) Reflect.deleteProperty(globalThis, name)
 })
 
 beforeEach(() => {

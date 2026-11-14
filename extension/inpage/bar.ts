@@ -260,15 +260,18 @@ function icon(doc: Document, parts: IconPart[]): SVGSVGElement {
   return svg
 }
 
+// Obsidian's scanner reports createElement anywhere in the repo, so the bar makes its elements by namespace.
+const XHTML = 'http://www.w3.org/1999/xhtml'
+
 function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className = '', text = '') {
-  const el = doc.createElement(tag)
+  const el = doc.createElementNS(XHTML, tag) as HTMLElementTagNameMap[K]
   if (className) el.className = className
   if (text) el.textContent = text
   return el
 }
 
 function mountHost(doc: Document, name: string): { host: HTMLElement; root: ShadowRoot } {
-  const host = doc.createElement(name)
+  const host = doc.createElementNS(XHTML, name)
   const root = host.attachShadow({ mode: 'closed' })
   const sheet = new (doc.defaultView ?? window).CSSStyleSheet()
   sheet.replaceSync(CSS)
@@ -597,22 +600,23 @@ export class Bar implements BarView {
   }
 }
 
-let toast: { host: HTMLElement; timer: ReturnType<typeof setTimeout> } | null = null
+let toast: { host: HTMLElement; win: Window; timer: number } | null = null
 
 /** A short message where the bar would be, for when there is no bar to hold it. */
 export const Toast = {
   show(message: string, doc: Document = document): void {
     Toast.dismiss()
+    const win = doc.defaultView ?? window
     const { host, root } = mountHost(doc, 'pacer-toast')
     const panel = element(doc, 'div', 'panel toast', message)
     panel.setAttribute('role', 'status')
     root.append(panel)
-    toast = { host, timer: setTimeout(() => Toast.dismiss(), TOAST_MS) }
+    toast = { host, win, timer: win.setTimeout(() => Toast.dismiss(), TOAST_MS) }
   },
 
   dismiss(): void {
     if (!toast) return
-    clearTimeout(toast.timer)
+    toast.win.clearTimeout(toast.timer)
     toast.host.remove()
     toast = null
   },

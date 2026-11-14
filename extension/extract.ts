@@ -6,7 +6,7 @@ export type Extracted =
   | { ok: false; message: string }
 
 // Pacer injects this file and then calls these globals, since scripting results must be plain data.
-Object.assign(globalThis, {
+Object.assign(window, {
   __pacerExtract: (): Extracted => {
     try {
       // An unscrolled page starts at the title, even when the first lines below it are in view.

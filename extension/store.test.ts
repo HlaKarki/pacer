@@ -36,6 +36,8 @@ describe('startFrom', () => {
 })
 
 describe('ExtensionStore', () => {
+  // The store only uses the window's timers, and the global scope has them under the fake clock.
+  const win = globalThis as unknown as Window
   type Listener = (changes: Record<string, { newValue?: unknown }>, area: string) => void
   let data: Record<string, unknown>
   let writes: Record<string, unknown>[]
@@ -73,7 +75,7 @@ describe('ExtensionStore', () => {
   const place = (index: number) => ({ index, words: 900, from: 0 })
 
   test('saves the place at least once a second while it keeps moving', async () => {
-    const store = await ExtensionStore.load()
+    const store = await ExtensionStore.load(win)
     for (let i = 0; i < 25; i++) {
       store.setPlace('https://example.com/a', place(i))
       jest.advanceTimersByTime(100)
@@ -83,7 +85,7 @@ describe('ExtensionStore', () => {
   })
 
   test('saves only the latest place for each page', async () => {
-    const store = await ExtensionStore.load()
+    const store = await ExtensionStore.load(win)
     store.setPlace('a', place(1))
     store.setPlace('a', place(2))
     store.setPlace('b', place(7))
@@ -93,7 +95,7 @@ describe('ExtensionStore', () => {
   })
 
   test('flush writes at once and cancels the pending save', async () => {
-    const store = await ExtensionStore.load()
+    const store = await ExtensionStore.load(win)
     store.setPlace('a', place(3))
     await store.flush()
     jest.advanceTimersByTime(2000)
@@ -102,7 +104,7 @@ describe('ExtensionStore', () => {
   })
 
   test('drops pending places without a write once the extension has reloaded', async () => {
-    const store = await ExtensionStore.load()
+    const store = await ExtensionStore.load(win)
     const warn = spyOn(console, 'warn')
     store.setPlace('a', place(4))
     ;(globalThis as unknown as { chrome: { runtime: { id?: string } } }).chrome.runtime.id = undefined
@@ -115,16 +117,16 @@ describe('ExtensionStore', () => {
 
   test('leaves Start on press off for settings saved before it existed, and keeps it once set', async () => {
     data.settings = { wpm: 400, chunk: 2 }
-    const store = await ExtensionStore.load()
+    const store = await ExtensionStore.load(win)
     expect(store.getSettings()).toMatchObject({ wpm: 400, chunk: 2, autoStart: false })
     store.updateSettings({ autoStart: true })
     await Promise.resolve()
     expect(data.settings).toEqual({ wpm: 400, chunk: 2, autoStart: true })
-    expect((await ExtensionStore.load()).getSettings().autoStart).toBe(true)
+    expect((await ExtensionStore.load(win)).getSettings().autoStart).toBe(true)
   })
 
   test('follows settings changed in another tab until disposed', async () => {
-    const store = await ExtensionStore.load()
+    const store = await ExtensionStore.load(win)
     const send = (wpm: number) => {
       for (const listener of listeners) listener({ settings: { newValue: { wpm } } }, 'local')
     }

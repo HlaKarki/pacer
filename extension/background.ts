@@ -24,7 +24,7 @@ const READER = chrome.runtime.getURL('reader.html')
 const PICKER_PAGES = /^(chrome:\/\/(newtab|new-tab-page)\/?|about:blank)$/
 const PRESS_GAP_MS = 300
 const IN_PAGE_TYPES = new Set(['text/html', 'application/xhtml+xml', 'text/plain'])
-const DEFAULT_TITLE = chrome.runtime.getManifest().action?.default_title ?? 'Pace this page'
+const DEFAULT_TITLE = (chrome.runtime.getManifest() as chrome.runtime.ManifestV3).action?.default_title ?? 'Pace this page'
 const MENU_PAGE = 'pace-page'
 const MENU_SELECTION = 'pace-selection'
 const lastPress = new Map<number, number>()
@@ -45,10 +45,10 @@ const probeTab = (tabId: number) => run(tabId, (): Probe => ({ contentType: docu
 async function grabPdf(tabId: number): Promise<ArrayBuffer> {
   const fetched = await run(tabId, async () => {
     try {
-      const response = await fetch(location.href)
+      const response = await window.fetch(location.href)
       if (!response.ok) return { ok: false, size: 0 }
       const bytes = new Uint8Array(await response.arrayBuffer())
-      Object.assign(globalThis, { __pacerPdf: bytes })
+      Object.assign(window, { __pacerPdf: bytes })
       return { ok: true, size: bytes.length }
     } catch {
       return { ok: false, size: 0 }
@@ -61,7 +61,7 @@ async function grabPdf(tabId: number): Promise<ArrayBuffer> {
       const base64 = await run(
         tabId,
         (from: number, to: number) => {
-          const bytes = (globalThis as unknown as { __pacerPdf: Uint8Array<ArrayBuffer> }).__pacerPdf.subarray(from, to)
+          const bytes = (window as unknown as { __pacerPdf: Uint8Array<ArrayBuffer> }).__pacerPdf.subarray(from, to)
           return new Promise<string>((resolve) => {
             const reader = new FileReader()
             reader.onload = () => resolve(String(reader.result).slice(String(reader.result).indexOf(',') + 1))
@@ -71,24 +71,24 @@ async function grabPdf(tabId: number): Promise<ArrayBuffer> {
         start,
         start + CHUNK_BYTES,
       )
-      const piece = await (await fetch(`data:application/octet-stream;base64,${base64}`)).arrayBuffer()
+      const piece = await (await self.fetch(`data:application/octet-stream;base64,${base64}`)).arrayBuffer()
       out.set(new Uint8Array(piece), start)
     }
     return out.buffer
   } finally {
-    await run(tabId, () => delete (globalThis as { __pacerPdf?: unknown }).__pacerPdf).catch(() => {})
+    await run(tabId, () => delete (window as { __pacerPdf?: unknown }).__pacerPdf).catch(() => {})
   }
 }
 
 async function readFileUrl(url: string): Promise<ArrayBuffer> {
-  const response = await fetch(url).catch(() => null)
+  const response = await self.fetch(url).catch(() => null)
   if (!response?.ok) throw new PaceError('Pacer could not open this file. It may have been moved or deleted.')
   return response.arrayBuffer()
 }
 
 async function grabArticle(tabId: number): Promise<Extracted> {
   await chrome.scripting.executeScript({ target: { tabId }, files: ['extract.js'] })
-  return run(tabId, () => (globalThis as unknown as { __pacerExtract: () => Extracted }).__pacerExtract())
+  return run(tabId, () => (window as unknown as { __pacerExtract: () => Extracted }).__pacerExtract())
 }
 
 async function recordFor(tab: chrome.tabs.Tab, tabId: number, read?: Article): Promise<DocRecord> {
@@ -148,7 +148,7 @@ async function routeOf(tab: chrome.tabs.Tab, tabId: number): Promise<'tab' | 'pa
 
 /** A new document or a reloaded extension has no copy of the page script yet, so that is when the styles go in too. */
 async function ensureInPage(tabId: number) {
-  const loaded = await run(tabId, () => typeof (globalThis as { __pacerInPage?: unknown }).__pacerInPage !== 'undefined')
+  const loaded = await run(tabId, () => typeof (window as { __pacerInPage?: unknown }).__pacerInPage !== 'undefined')
   if (loaded) return
   await chrome.scripting.insertCSS({ target: { tabId }, files: ['inpage.css'] })
   await chrome.scripting.executeScript({ target: { tabId }, files: ['inpage.js'] })
@@ -159,7 +159,7 @@ async function startInPage(tab: chrome.tabs.Tab, tabId: number, start?: MenuStar
   const result = await run(
     tabId,
     (menu: boolean, text: string | null) => {
-      const page = (globalThis as unknown as { __pacerInPage: InPage }).__pacerInPage
+      const page = (window as unknown as { __pacerInPage: InPage }).__pacerInPage
       return menu ? page.readFrom(text) : page.toggle()
     },
     start !== undefined,
@@ -253,4 +253,4 @@ chrome.runtime.onInstalled.addListener(() => void setUpMenus())
 chrome.contextMenus.onClicked.addListener((info, tab) => void onMenu(info, tab))
 
 // Nothing can press the toolbar button or open a menu in an automated browser, so the e2e run calls these instead.
-Object.assign(globalThis, { paceTab, onMenu })
+Object.assign(self, { paceTab, onMenu })

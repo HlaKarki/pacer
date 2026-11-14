@@ -1,7 +1,7 @@
 import { withoutHash } from '../pages'
 
 /** True in a copy of Pacer left on the page by an extension reload, where storage and messages no longer work. */
-export const extensionGone = (): boolean => !globalThis.chrome?.runtime?.id
+export const extensionGone = (): boolean => typeof chrome === 'undefined' || !chrome.runtime?.id
 
 /** Calls leave when the page moves to another address in place. Hash changes and same-path replaces, like a scrollspy rewriting #s1, keep reading. */
 export function watchNavigation(win: Window, key: string, leave: () => void): () => void {

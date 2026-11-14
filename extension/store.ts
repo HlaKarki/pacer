@@ -38,11 +38,17 @@ export class ExtensionStore implements SettingsStore {
   private snapshot: Settings = DEFAULT_SETTINGS
   private listeners = new Set<() => void>()
   private pending = new Map<string, Place>()
-  private timer: ReturnType<typeof setTimeout> | null = null
+  private timer: number | null = null
   private unlisten: (() => void) | null = null
 
-  static async load(): Promise<ExtensionStore> {
-    const store = new ExtensionStore()
+  private readonly win: Window
+
+  constructor(win: Window) {
+    this.win = win
+  }
+
+  static async load(win: Window): Promise<ExtensionStore> {
+    const store = new ExtensionStore(win)
     const { settings } = await chrome.storage.local.get('settings')
     store.apply(isObject(settings) ? settings : {})
     const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
@@ -85,11 +91,11 @@ export class ExtensionStore implements SettingsStore {
   setPlace(key: string, place: Place) {
     this.pending.set(key, place)
     // Playing moves the place several times a second, so a timer that restarted on every move would never fire.
-    this.timer ??= setTimeout(() => void this.flush(), SAVE_DELAY_MS)
+    this.timer ??= this.win.setTimeout(() => void this.flush(), SAVE_DELAY_MS)
   }
 
   async flush(): Promise<void> {
-    if (this.timer !== null) clearTimeout(this.timer)
+    if (this.timer !== null) this.win.clearTimeout(this.timer)
     this.timer = null
     // A copy of Pacer left on a page by an extension reload has lost its storage, so it drops the places.
     if (!this.pending.size || !chrome.runtime?.id) {
