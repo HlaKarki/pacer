@@ -7,7 +7,7 @@
 @font-face { font-family: 'Instrument Sans'; src: url('../../node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2') format('woff2'); font-weight: 400 700; }
 :root {
   --paper: #eff1ed; --ink: #1b2126; --ink-soft: #485159; --muted: #78818a; --rule: #d5dad4;
-  --marker: #fbe17a; --accent: #2442c4; --read: color-mix(in oklab, #1b2126 58%, #eff1ed);
+  --marker: #fbe17a; --bg: #e4e7e1; --bg2: #d8dcd4; --raised: #fbfaf7; --read: color-mix(in oklab, #1b2126 58%, #eff1ed);
 }
 * { margin: 0; box-sizing: border-box; }
 body { background: var(--paper); color: var(--ink); font-family: 'Literata', Georgia, serif; -webkit-font-smoothing: antialiased; }
@@ -26,15 +26,15 @@ body[data-card="og"] #og, body[data-card="tile"] #tile, body[data-card="marquee"
 #og .tag { font-size: 30px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
 #og .where { font-size: 26px; color: var(--ink-soft); }
 
-#tile { width: 440px; height: 280px; background: var(--accent); color: #fff; flex-direction: column; justify-content: center; padding: 0 36px; gap: 18px; }
+#tile { width: 440px; height: 280px; background: linear-gradient(180deg, var(--bg), var(--bg2)); color: var(--ink); flex-direction: column; justify-content: center; padding: 0 36px; gap: 18px; }
 #tile .mark { font-size: 64px; align-self: flex-start; margin-left: -0.22em; }
 #tile .tag { font-size: 25px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
 
-#marquee { width: 1400px; height: 560px; background: var(--accent); color: #fff; padding: 64px 80px; gap: 72px; align-items: center; }
+#marquee { width: 1400px; height: 560px; background: linear-gradient(180deg, var(--bg), var(--bg2)); color: var(--ink); padding: 64px 80px; gap: 72px; align-items: center; }
 #marquee .left { flex: 0 0 440px; display: flex; flex-direction: column; gap: 26px; }
 #marquee .mark { font-size: 84px; align-self: flex-start; }
 #marquee .tag { font-size: 34px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
-#marquee .page { flex: 1; background: var(--paper); color: var(--ink); border-radius: 18px; padding: 44px 52px; box-shadow: 0 24px 60px rgba(8, 18, 70, .35); }
+#marquee .page { flex: 1; background: var(--raised); color: var(--ink); border-radius: 18px; padding: 44px 52px; box-shadow: 0 24px 64px rgba(24, 34, 44, 0.16), 0 0 0 1px rgba(24, 34, 44, 0.07); }
 #marquee .passage { font-size: 34px; line-height: 1.6; }
 </style>
 </head>
@@ -50,13 +50,13 @@ body[data-card="og"] #og, body[data-card="tile"] #tile, body[data-card="marquee"
 
 <section class="card" id="tile">
   <div class="mark">Pacer</div>
-  <div class="tag ui">Speed read any page<br>without leaving it.</div>
+  <div class="tag ui">You can read any page<br>by following a highlight.</div>
 </section>
 
 <section class="card" id="marquee">
   <div class="left">
     <div class="mark">Pacer</div>
-    <div class="tag ui">Speed read any article without leaving the page.</div>
+    <div class="tag ui">You can read any web page by following a highlight.</div>
   </div>
   <div class="page">
     <p class="passage"><span class="read">Your eyes do not glide across a page. They jump. Each jump</span> <span class="now">is</span> called a saccade, and between jumps the eye holds still for roughly a quarter of a second while it takes in a few letters on either side of where it landed.</p>

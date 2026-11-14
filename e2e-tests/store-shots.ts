@@ -15,11 +15,11 @@ const VIEW = { width: 1120, height: 648 }
 const FONT = join(REPO, 'node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2')
 
 const SHOTS: { raw: string; caption: string; dark?: boolean }[] = [
-  { raw: 'hero', caption: 'Speed read any article without leaving the page' },
-  { raw: 'settings', caption: 'Move a word, a phrase or a sentence at a time' },
-  { raw: 'pdf', caption: 'PDFs open in a Pacer tab next to the original' },
-  { raw: 'focus', caption: 'Focus view shows the words large, with their sentence below', dark: true },
-  { raw: 'dark', caption: 'Works on light and dark pages', dark: true },
+  { raw: 'hero', caption: 'You can read any web page by following a highlight.' },
+  { raw: 'settings', caption: 'You can move a word, a phrase or a sentence at a time.' },
+  { raw: 'pdf', caption: 'You can read a PDF in a Pacer tab next to the original.' },
+  { raw: 'focus', caption: 'You can read big words in Focus view, with the sentence below.', dark: true },
+  { raw: 'dark', caption: 'You can use it on light and dark pages.', dark: true },
 ]
 
 await rm(EXT, { recursive: true, force: true })
@@ -170,9 +170,9 @@ try {
       `<!doctype html><meta charset="utf-8"><style>
 @font-face { font-family: 'Instrument Sans'; src: url('file://${FONT}') format('woff2'); font-weight: 400 700; }
 html, body { margin: 0; }
-body { width: 1280px; height: 800px; overflow: hidden; position: relative; background: #2442c4; font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-h1 { position: absolute; top: 38px; left: 0; right: 0; margin: 0; text-align: center; color: #fff; font-size: 38px; line-height: 1.2; font-weight: 600; letter-spacing: -0.015em; }
-.win { position: absolute; top: 120px; left: 80px; width: 1120px; border-radius: 14px 14px 0 0; overflow: hidden; box-shadow: 0 30px 80px rgba(8, 18, 70, 0.5); }
+body { width: 1280px; height: 800px; overflow: hidden; position: relative; background: linear-gradient(180deg, #e4e7e1, #d8dcd4); font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+h1 { position: absolute; top: 38px; left: 0; right: 0; margin: 0; text-align: center; color: #1b2126; font-size: 36px; line-height: 1.2; font-weight: 600; letter-spacing: -0.015em; }
+.win { position: absolute; top: 120px; left: 80px; width: 1120px; border-radius: 14px 14px 0 0; overflow: hidden; box-shadow: 0 24px 64px rgba(24, 34, 44, 0.16), 0 0 0 1px rgba(24, 34, 44, 0.07); }
 .strip { height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: ${shot.dark ? '#2a2d31' : '#e8eaed'}; }
 .strip i { width: 12px; height: 12px; border-radius: 50%; background: ${shot.dark ? '#4a4e54' : '#c6cad0'}; }
 img { display: block; width: 1120px; height: 648px; }
