@@ -104,7 +104,7 @@ export function paragraphsFromPages(
   const all = pages.flatMap((lines, page) => lines.map((line) => ({ ...line, page })))
   if (!all.length) return { text: '', pages: [] }
 
-  const weightedSizes = all.flatMap((l) => Array(Math.min(20, Math.ceil(l.text.length / 10))).fill(l.size))
+  const weightedSizes = all.flatMap((l) => new Array<number>(Math.min(20, Math.ceil(l.text.length / 10))).fill(l.size))
   const body = median(weightedSizes)
   const gaps: number[] = []
   for (let i = 1; i < all.length; i++) {

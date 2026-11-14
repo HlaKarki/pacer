@@ -37,15 +37,18 @@ export async function extractPdf(
       const page = await doc.getPage(n)
       const content = await page.getTextContent()
       const items = content.items
-        .filter((item): item is TextItem => 'str' in item && isHorizontal(item.transform))
-        .map((item) => ({
-          str: item.str,
-          x: item.transform[4],
-          y: item.transform[5],
-          width: item.width,
-          size: item.height || Math.hypot(item.transform[2], item.transform[3]),
-          eol: item.hasEOL,
-        }))
+        .filter((item): item is TextItem => 'str' in item && isHorizontal(item.transform as number[]))
+        .map((item) => {
+          const t = item.transform as number[]
+          return {
+            str: item.str,
+            x: t[4],
+            y: t[5],
+            width: item.width,
+            size: item.height || Math.hypot(t[2], t[3]),
+            eol: item.hasEOL,
+          }
+        })
       pages.push(linesFromItems(items))
       page.cleanup()
     }
