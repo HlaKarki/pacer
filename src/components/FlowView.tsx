@@ -80,7 +80,7 @@ export function FlowView({
     const lineHeight = parseFloat(getComputedStyle(span.parentElement!).lineHeight)
     const lineTop = span.offsetTop - (lineHeight - span.offsetHeight) / 2
     const target = Math.max(0, lineTop - viewport.clientHeight * BAND)
-    cancelAnimationFrame(scroll.current.frame)
+    window.cancelAnimationFrame(scroll.current.frame)
     const from = viewport.scrollTop
     const distance = target - from
     if (!animate || prefersReducedMotion() || Math.abs(distance) > viewport.clientHeight * 1.5) {
@@ -93,9 +93,9 @@ export function FlowView({
       const t = Math.min(1, (now - t0) / duration)
       const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
       viewport.scrollTop = from + distance * eased
-      if (t < 1) scroll.current.frame = requestAnimationFrame(step)
+      if (t < 1) scroll.current.frame = window.requestAnimationFrame(step)
     }
-    scroll.current.frame = requestAnimationFrame(step)
+    scroll.current.frame = window.requestAnimationFrame(step)
   }, [])
 
   const measure = useCallback(() => {
@@ -166,11 +166,7 @@ export function FlowView({
       ? `transform ${glideMs}ms var(--pc-ease-glide), width ${glideMs}ms var(--pc-ease-glide)`
       : 'none'
     placeMarker(marker, segments[0])
-    while (rest.childElementCount < segments.length - 1) {
-      const extra = document.createElement('div')
-      extra.className = 'pc-marker'
-      rest.append(extra)
-    }
+    while (rest.childElementCount < segments.length - 1) rest.append(marker.cloneNode())
     while (rest.childElementCount > segments.length - 1) rest.lastElementChild!.remove()
     segments.slice(1).forEach((segment, k) => placeMarker(rest.children[k] as HTMLElement, segment))
     markedLine.current = line
