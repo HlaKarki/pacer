@@ -14,25 +14,25 @@ body { background: var(--paper); color: var(--ink); font-family: 'Literata', Geo
 .card { position: relative; overflow: hidden; display: none; }
 body[data-card="og"] #og, body[data-card="tile"] #tile, body[data-card="marquee"] #marquee { display: flex; }
 
-.mark { font-weight: 640; letter-spacing: -0.01em; padding: 0 0.2em; background: linear-gradient(transparent 55%, var(--marker) 55%, var(--marker) 92%, transparent 92%); }
+.mark { font-weight: 640; letter-spacing: -0.01em; color: var(--ink); background: var(--marker); border-radius: 0.1em; padding: 0 0.22em 0.04em; }
 .passage .read { color: var(--read); }
 .passage .now { background: var(--marker); border-radius: 0.14em; box-shadow: 0 0 0 0.08em var(--marker); }
 .ui { font-family: 'Instrument Sans', system-ui, sans-serif; }
 
 #og { width: 1200px; height: 630px; padding: 56px 72px 52px; flex-direction: column; }
-#og .mark { font-size: 46px; align-self: flex-start; margin-left: -0.2em; }
+#og .mark { font-size: 46px; align-self: flex-start; margin-left: -0.22em; }
 #og .passage { margin-top: auto; font-size: 50px; line-height: 1.5; letter-spacing: -0.005em; }
 #og .foot { margin-top: 44px; display: flex; align-items: baseline; justify-content: space-between; border-top: 2px solid var(--rule); padding-top: 22px; }
 #og .tag { font-size: 30px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
 #og .where { font-size: 26px; color: var(--ink-soft); }
 
 #tile { width: 440px; height: 280px; background: var(--accent); color: #fff; flex-direction: column; justify-content: center; padding: 0 36px; gap: 18px; }
-#tile .mark { font-size: 64px; color: var(--ink); align-self: flex-start; margin-left: -0.2em; background: var(--marker); border-radius: 6px; padding: 0 0.22em 0.04em; }
+#tile .mark { font-size: 64px; align-self: flex-start; margin-left: -0.22em; }
 #tile .tag { font-size: 25px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
 
 #marquee { width: 1400px; height: 560px; background: var(--accent); color: #fff; padding: 64px 80px; gap: 72px; align-items: center; }
 #marquee .left { flex: 0 0 440px; display: flex; flex-direction: column; gap: 26px; }
-#marquee .mark { font-size: 84px; color: var(--ink); align-self: flex-start; background: var(--marker); border-radius: 8px; padding: 0 0.22em 0.04em; }
+#marquee .mark { font-size: 84px; align-self: flex-start; }
 #marquee .tag { font-size: 34px; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
 #marquee .page { flex: 1; background: var(--paper); color: var(--ink); border-radius: 18px; padding: 44px 52px; box-shadow: 0 24px 60px rgba(8, 18, 70, .35); }
 #marquee .passage { font-size: 34px; line-height: 1.6; }
