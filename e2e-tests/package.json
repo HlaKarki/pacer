@@ -5,7 +5,8 @@
   "scripts": {
     "e2e": "bun ext-e2e.ts && bun inpage-e2e.ts",
     "smoke": "bun inpage-smoke.ts",
-    "store": "bun store-shots.ts"
+    "store": "bun store-shots.ts",
+    "video": "bun video/capture.ts article cold pdf epub && bun video/obsidian.ts && bun video/compose.ts"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",
