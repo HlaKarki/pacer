@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Window } from 'happy-dom'
 import { blocksToText } from '../src/lib/import/html'
 import { parse } from '../src/lib/text'
@@ -203,6 +203,9 @@ describe('section markdown', () => {
 })
 
 describe('PacerStore', () => {
+  // Obsidian gives plugins a global window, so these tests point it at the global scope for the save timer.
+  beforeAll(() => Object.assign(globalThis, { window: globalThis }))
+  afterAll(() => Reflect.deleteProperty(globalThis, 'window'))
   const store = (saved: unknown = {}) => {
     const writes: PluginData[] = []
     const s = new PacerStore(saved, async (data) => {

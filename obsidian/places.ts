@@ -20,7 +20,7 @@ function normalize(saved: unknown): PluginData {
 export class PacerStore {
   private data: PluginData
   private snapshot: Settings
-  private timer: ReturnType<typeof setTimeout> | null = null
+  private timer: number | null = null
   private listeners = new Set<() => void>()
   private save: (data: PluginData) => Promise<void>
 
@@ -83,7 +83,7 @@ export class PacerStore {
 
   async flush(): Promise<void> {
     if (this.timer === null) return
-    clearTimeout(this.timer)
+    window.clearTimeout(this.timer)
     this.timer = null
     try {
       await this.save(this.data)
@@ -94,7 +94,7 @@ export class PacerStore {
   }
 
   private schedule() {
-    if (this.timer !== null) clearTimeout(this.timer)
-    this.timer = setTimeout(() => void this.flush(), SAVE_DELAY_MS)
+    if (this.timer !== null) window.clearTimeout(this.timer)
+    this.timer = window.setTimeout(() => void this.flush(), SAVE_DELAY_MS)
   }
 }

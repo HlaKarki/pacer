@@ -35,11 +35,9 @@ export class PacerView extends FileView {
   constructor(leaf: WorkspaceLeaf, plugin: PacerPlugin) {
     super(leaf)
     this.plugin = plugin
-    this.rootEl = document.createElement('div')
-    this.rootEl.className = 'pc-root'
+    this.rootEl = this.contentEl.createDiv({ cls: 'pc-root' })
     // Focusable so Pacer's keys only fire while this tab has focus.
     this.rootEl.tabIndex = -1
-    this.contentEl.appendChild(this.rootEl)
   }
 
   getViewType() {

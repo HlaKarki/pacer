@@ -79,7 +79,7 @@ async function noteSource(app: App, file: TFile): Promise<Source> {
   try {
     const rendered: RenderedSection[] = []
     for (const part of parts ?? [{ type: 'note', line: 0, markdown: stripFrontmatter(markdown), itemLines: [] }]) {
-      const el = document.createElement('div')
+      const el = createDiv()
       try {
         await MarkdownRenderer.render(app, prepareSection(part.markdown, definitions), el, file.path, component)
       } catch (error) {
@@ -104,6 +104,6 @@ async function embedsLoaded(els: Element[]) {
     )
   const until = performance.now() + EMBED_WAIT_MS
   while (pending() && performance.now() < until) {
-    await new Promise((resolve) => setTimeout(resolve, 50))
+    await new Promise((resolve) => window.setTimeout(resolve, 50))
   }
 }
