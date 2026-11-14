@@ -65,22 +65,22 @@ const back = (p: number) => 1 + 2.2 * (p - 1) ** 3 + 1.2 * (p - 1) ** 2
 const ALT = ['Alt', 'Shift', 'P']
 const LINE = 275
 const SEGS: Seg[] = [
-  { len: 3.0, clip: 'cold', from: 2.0, caption: 'Speed reading, right on the page.', cam: [[0, 1.3, 640, LINE], [3, 1.42, 640, LINE]] },
-  { len: 2.6, rsvp: true, fade: 0.3, caption: 'Blink, and the sentence is gone.' },
-  { len: 4.0, clip: 'article', from: 0.4, fade: 0.3, caption: 'Alt+Shift+P marks your place. Space starts.', keys: [['pace', ALT], ['play', ['Space']]] },
+  { len: 3.4, clip: 'cold', from: 2.0, caption: 'You can read any web page by following a highlight.', cam: [[0, 1.3, 640, LINE], [3, 1.42, 640, LINE]] },
+  { len: 3.2, rsvp: true, fade: 0.3, caption: 'In one-word-at-a-time apps, you miss words when you blink.' },
+  { len: 4.0, clip: 'article', from: 0.4, fade: 0.3, caption: 'You can start with Alt+Shift+P, then play with Space.', keys: [['pace', ALT], ['play', ['Space']]] },
   {
-    len: 5.0, clip: 'article', from: 7.8, fade: 0.3, caption: '↑ and ↓ set the pace.', keys: [['up1', ['↑']], ['up2', ['↑']]],
+    len: 5.0, clip: 'article', from: 7.8, fade: 0.3, caption: 'You can speed up or slow down with ↑ and ↓.', keys: [['up1', ['↑']], ['up2', ['↑']]],
     cam: [[1.3, 1, 640, 400], [2.0, 1.6, 520, 690], [3.9, 1.6, 520, 690], [4.7, 1.1, 640, LINE]],
   },
-  { len: 4.0, clip: 'article', from: 18.0, fade: 0.3, caption: 'Rare words get more time. “the” gets less.', cam: [[0.1, 1.1, 640, LINE], [1.1, 1.6, 640, LINE]] },
-  { len: 3.0, clip: 'article', from: 22.0, caption: 'Lost your place? Click a word.', click: 'click', cam: [[0, 1.6, 640, LINE], [0.7, 1.3, 640, LINE]] },
+  { len: 4.0, clip: 'article', from: 18.0, fade: 0.3, caption: 'You get more time on long or rare words and less on “the”.', cam: [[0.1, 1.1, 640, LINE], [1.1, 1.6, 640, LINE]] },
+  { len: 3.0, clip: 'article', from: 22.0, caption: 'You can jump to any word by clicking it.', click: 'click', cam: [[0, 1.6, 640, LINE], [0.7, 1.3, 640, LINE]] },
   {
-    len: 3.5, clip: 'article', from: 25.0, caption: 'Esc stops. The next press picks up where you left off.',
+    len: 4.0, clip: 'article', from: 25.0, caption: 'You can stop with Esc and resume from the same word later.',
     keys: [['esc1', ['Esc']], ['esc2', ['Esc']], ['pace2', ALT]], cam: [[0, 1.3, 640, LINE], [0.6, 1, 640, LINE]],
   },
-  { len: 4.0, clip: 'obsidian', from: 0.5, fade: 0.3, caption: 'Also an Obsidian plugin.', keys: [['play', ['Space']]], cam: [[1.3, 1, 640, 360], [2.4, 1.45, 1100, 600]] },
-  { len: 1.6, clip: 'pdf', from: 0.3, fade: 0.3, caption: 'PDFs and EPUBs too.' },
-  { len: 1.6, clip: 'epub', from: 2.2, fade: 0.3, caption: 'PDFs and EPUBs too.' },
+  { len: 4.0, clip: 'obsidian', from: 0.5, fade: 0.3, caption: 'You can read your Obsidian notes the same way.', keys: [['play', ['Space']]], cam: [[1.3, 1, 640, 360], [2.4, 1.45, 1100, 600]] },
+  { len: 1.8, clip: 'pdf', from: 0.3, fade: 0.3, caption: 'You can read PDFs and EPUBs in Pacer’s reader too.' },
+  { len: 1.8, clip: 'epub', from: 2.2, fade: 0.3, caption: 'You can read PDFs and EPUBs in Pacer’s reader too.' },
   { len: 4.0, end: true, caption: '' },
 ]
 
