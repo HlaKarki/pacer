@@ -27,7 +27,8 @@ body { position: relative; background: linear-gradient(180deg, var(--bg), var(--
 .rsvp .word { position: absolute; top: 50%; transform: translateY(-50%); font-family: 'Literata', Georgia, serif; font-size: 84px; font-weight: 500; color: #2a2a2a; white-space: pre; }
 .rsvp .word b { font-weight: 500; color: #d2361f; }
 .rsvp .wpm { position: absolute; right: 0; bottom: -46px; font-size: 22px; color: #8c8c88; font-variant-numeric: tabular-nums; }
-.eye { position: absolute; left: 50%; top: 50%; width: 2400px; height: 1400px; border-radius: 50%; box-shadow: 0 0 0 2400px #0c0d10; transform: translate(-50%, -50%); }
+.lid { position: absolute; left: 0; right: 0; top: 0; height: 150%; background: linear-gradient(to bottom, #0d0e10 0%, #0d0e10 68%, rgba(13, 14, 16, 0.85) 76%, rgba(13, 14, 16, 0) 100%); }
+.lid.low { top: auto; bottom: 0; height: 40%; background: linear-gradient(to top, #0d0e10 0%, #0d0e10 40%, rgba(13, 14, 16, 0) 100%); }
 
 .keys { position: absolute; left: 0; right: 0; top: 34px; display: flex; justify-content: center; gap: 14px; pointer-events: none; }
 .key { min-width: 76px; height: 76px; padding: 0 22px; display: grid; place-items: center; border-radius: 16px; background: #1d2127; color: #fff; font-size: 32px; font-weight: 600; letter-spacing: -0.01em; box-shadow: 0 6px 0 #0b0d10, 0 16px 34px rgba(0, 0, 0, 0.28); }
@@ -52,7 +53,7 @@ body { position: relative; background: linear-gradient(180deg, var(--bg), var(--
   <div class="view" id="view">
     <img id="l0" alt=""><img id="l1" alt="">
     <div class="rsvp" id="rsvp"><div class="box"><div class="word" id="word"></div><div class="wpm">500 wpm</div></div></div>
-    <div class="eye" id="eye"></div>
+    <div class="lid" id="lid"></div><div class="lid low" id="lidLow"></div>
     <div class="keys" id="keys"></div>
     <div class="ripple" id="ripple"></div>
     <svg class="cursor" id="cursor" viewBox="0 0 40 40"><path d="M6 4 L6 33 L13.5 26 L18.5 37 L23.5 35 L18.6 24.2 L28.5 24 Z" fill="#111" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg>
@@ -101,8 +102,10 @@ window.render = async (s) => {
   show($('rsvp'), s.rsvp ? s.rsvp.o : 0)
   if (s.rsvp) placeWord(s.rsvp.word)
   const lid = s.rsvp ? s.rsvp.lid : 0
-  show($('eye'), lid > 0 ? 1 : 0, 'translate(-50%, -50%)')
-  $('eye').style.height = `${1400 * (1 - lid)}px`
+  // The upper lid does almost all the work, and the lower one only rises a little to meet it.
+  show($('lid'), lid > 0 ? 1 : 0, `translateY(${-100 + lid * 100}%)`)
+  show($('lidLow'), lid > 0 ? 1 : 0, `translateY(${100 - lid * 100}%)`)
+  $('rsvp').style.filter = lid > 0 ? `blur(${lid * 5}px) brightness(${1 - lid * 0.35})` : ''
 
   s.caps.forEach((c, i) => {
     const el = $(`cap${i}`)

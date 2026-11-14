@@ -167,7 +167,9 @@ function stateAt(t: number) {
     const rl = t - r.at
     const n = Math.floor((rl - 0.1) / 0.12)
     const blink = 1.25
-    const lid = rl < blink ? 0 : rl < blink + 0.09 ? inOut((rl - blink) / 0.09) : rl < blink + 0.16 ? 1 : rl < blink + 0.32 ? 1 - out((rl - blink - 0.16) / 0.16) : 0
+    // A real blink shuts in about 90 ms, stays shut for 40 and takes about twice as long to open.
+    const b = rl - blink
+    const lid = b < 0 ? 0 : b < 0.09 ? (b / 0.09) ** 2 : b < 0.13 ? 1 : b < 0.31 ? 1 - out((b - 0.13) / 0.18) : 0
     rsvp = { o: seg.rsvp ? (prev?.clip ? fadeP : 1) : 1 - fadeP, word: n >= 0 ? orp(RSVP_TEXT[n % RSVP_TEXT.length]!) : null, lid }
   }
 
