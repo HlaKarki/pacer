@@ -6,15 +6,17 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # Obsidian's scan rebuilds main.js with the Bun in packageManager, so CI reads the same pin.
       - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.0
       - run: bun install --frozen-lockfile
       # Obsidian rejects a release whose tag differs from manifest.json's version.
       - name: Check the tag matches every manifest
@@ -27,6 +29,13 @@ jobs:
       - run: bun run lint
       - run: bun run build
       - run: bun run zip:extension
+      - uses: actions/attest@v4
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+            release/pacer-chrome-${{ github.ref_name }}.zip
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
