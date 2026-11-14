@@ -5,14 +5,15 @@
 <style>
 @font-face { font-family: 'Literata'; src: url('../../node_modules/@fontsource-variable/literata/files/literata-latin-opsz-normal.woff2') format('woff2'); font-weight: 200 900; }
 @font-face { font-family: 'Instrument Sans'; src: url('../../node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2') format('woff2'); font-weight: 400 700; }
-:root { --blue: #2442c4; --ink: #1b2126; --marker: #fbe17a; }
+:root { --ink: #1b2126; --marker: #fbe17a; --bg: #e4e7e1; --bg2: #d8dcd4; --cap: #1b2126; --soft: #5b646c; --shadow: 0 30px 80px rgba(24, 34, 44, 0.16), 0 0 0 1px rgba(24, 34, 44, 0.07); }
+body[data-theme='ink'] { --bg: #1c2024; --bg2: #121518; --cap: #eef0ec; --soft: #98a1a9; --shadow: 0 40px 110px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.07); }
 * { margin: 0; box-sizing: border-box; }
 html, body { width: 1920px; height: 1080px; overflow: hidden; }
-body { position: relative; background: var(--blue); font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+body { position: relative; background: linear-gradient(180deg, var(--bg), var(--bg2)); font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 
-.cap { position: absolute; left: 0; right: 0; top: 56px; text-align: center; color: #fff; font-size: 54px; line-height: 1.2; font-weight: 600; letter-spacing: -0.015em; white-space: nowrap; }
+.cap { position: absolute; left: 0; right: 0; top: 56px; text-align: center; color: var(--cap); font-size: 54px; line-height: 1.2; font-weight: 600; letter-spacing: -0.015em; white-space: nowrap; }
 
-.win { position: absolute; left: 192px; top: 176px; width: 1536px; border-radius: 18px 18px 0 0; overflow: hidden; box-shadow: 0 40px 110px rgba(8, 18, 70, 0.55); transform-origin: 50% 0; }
+.win { position: absolute; left: 192px; top: 176px; width: 1536px; border-radius: 18px 18px 0 0; overflow: hidden; box-shadow: var(--shadow); transform-origin: 50% 0; }
 .strip { height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 18px; background: #e8eaed; }
 .strip i { width: 14px; height: 14px; border-radius: 50%; background: #c6cad0; }
 .view { position: relative; width: 1536px; height: 864px; overflow: hidden; background: #fbfaf7; }
@@ -33,14 +34,14 @@ body { position: relative; background: var(--blue); font-family: 'Instrument San
 .keyrow { display: flex; gap: 14px; }
 
 .cursor { position: absolute; left: 0; top: 0; width: 54px; height: 54px; transform-origin: 8px 5px; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3)); }
-.ripple { position: absolute; left: 0; top: 0; width: 120px; height: 120px; border-radius: 50%; border: 5px solid var(--blue); }
+.ripple { position: absolute; left: 0; top: 0; width: 120px; height: 120px; border-radius: 50%; border: 5px solid var(--ink); }
 
-.end { position: absolute; inset: 0; background: var(--blue); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; }
+.end { position: absolute; inset: 0; background: linear-gradient(180deg, var(--bg), var(--bg2)); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--cap); }
 .end .mark { position: relative; isolation: isolate; font-family: 'Literata', Georgia, serif; font-size: 180px; font-weight: 640; letter-spacing: -0.01em; color: var(--ink); padding: 0 0.22em 0.04em; line-height: 1.25; }
 .end .mark::before { content: ''; position: absolute; inset: 0; border-radius: 0.1em; background: var(--marker); transform-origin: 0 50%; transform: scaleX(var(--sweep, 1)); z-index: -1; }
 .end .mark span { position: relative; }
 .end .tag { margin-top: 58px; font-size: 52px; font-weight: 600; letter-spacing: -0.015em; }
-.end .where { margin-top: 22px; font-size: 38px; color: rgba(255, 255, 255, 0.78); }
+.end .where { margin-top: 22px; font-size: 38px; color: var(--soft); }
 </style>
 </head>
 <body>

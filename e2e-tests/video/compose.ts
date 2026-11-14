@@ -231,15 +231,17 @@ const args = process.argv.slice(2)
 const stills = args.find((a) => a.startsWith('--stills='))?.slice(9).split(',').map(Number)
 const range = args.find((a) => a.startsWith('--range='))?.slice(8).split(',').map(Number) ?? [0, total]
 const outFile = args.find((a) => !a.startsWith('--')) ?? join(REPO, 'release/video/pacer-demo.mp4')
+const theme = args.find((a) => a.startsWith('--theme='))?.slice(8) ?? 'paper'
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true })
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 })
 await page.goto(pathToFileURL(join(import.meta.dir, 'stage.html')).href)
-await page.evaluate(async () => {
+await page.evaluate(async (theme) => {
+  document.body.dataset.theme = theme
   await document.fonts.load('600 54px "Instrument Sans"')
   await document.fonts.load('640 180px Literata')
   await document.fonts.ready
-})
+}, theme)
 const cdp = await page.context().newCDPSession(page)
 const shoot = async (t: number) => {
   await page.evaluate((s) => (window as unknown as { render: (s: unknown) => Promise<void> }).render(s), stateAt(t))
@@ -249,7 +251,7 @@ const shoot = async (t: number) => {
 
 console.log(`total ${total.toFixed(2)} s, segments at ${segs.map((s) => `${s.at.toFixed(1)}${s.clip ? ` ${s.clip}` : s.rsvp ? ' rsvp' : ' end'}`).join(', ')}`)
 if (stills) {
-  const dir = join(OUT, 'video/stills')
+  const dir = join(OUT, `video/stills-${theme}`)
   await mkdir(dir, { recursive: true })
   for (const t of stills) await Bun.write(join(dir, `${t.toFixed(2)}.png`), await shoot(t))
   console.log(dir)
