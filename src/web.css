@@ -86,8 +86,9 @@ body {
   font-size: 1.3rem;
   font-weight: 640;
   letter-spacing: -0.01em;
-  padding: 0 0.2em;
-  background: linear-gradient(transparent 55%, var(--pc-marker) 55%, var(--pc-marker) 92%, transparent 92%);
+  padding: 0 0.22em 0.04em;
+  border-radius: 0.1em;
+  background: var(--pc-marker);
 }
 
 .pc-editor {
