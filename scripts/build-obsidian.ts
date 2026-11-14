@@ -1,5 +1,24 @@
+import type { BunPlugin } from 'bun'
+
 // Obsidian's directory scan runs `build` and expects main.js and styles.css beside manifest.json at the repo root.
 const OUT = '.'
+
+// React DOM 19 contains createElement('script'), which Obsidian's directory scan rejects as an error, so the plugin bundles Preact instead.
+const PREACT: Record<string, string> = {
+  react: 'preact/compat',
+  'react-dom': 'preact/compat',
+  'react-dom/client': 'preact/compat/client',
+  'react/jsx-runtime': 'preact/compat/jsx-runtime',
+  'react/jsx-dev-runtime': 'preact/compat/jsx-dev-runtime',
+}
+const preact: BunPlugin = {
+  name: 'preact',
+  setup(build) {
+    build.onResolve({ filter: /^react(-dom)?(\/[a-z-]+)?$/ }, ({ path }) =>
+      PREACT[path] ? { path: Bun.resolveSync(PREACT[path], process.cwd()) } : undefined,
+    )
+  },
+}
 
 const result = await Bun.build({
   entrypoints: ['./obsidian/main.ts'],
@@ -11,6 +30,7 @@ const result = await Bun.build({
   external: ['obsidian', 'electron', '@codemirror/*', '@lezer/*'],
   define: { 'process.env.NODE_ENV': '"production"' },
   minify: true,
+  plugins: [preact],
 })
 if (!result.success) {
   for (const log of result.logs) console.error(log)
