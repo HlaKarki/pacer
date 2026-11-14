@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   Minus,
@@ -111,7 +111,8 @@ export function Reader({
 
   const setWpm = useCallback((wpm: number) => update({ wpm: clampWpm(wpm) }), [update])
 
-  useEffect(() => {
+  // Preact runs plain effects a frame late, so a second fast key press would hit the old listener; layout effects run before the next event.
+  useLayoutEffect(() => {
     const onKey = (event: Event) => {
       const e = event as KeyboardEvent
       const target = e.target as HTMLElement
