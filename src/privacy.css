@@ -1,0 +1,54 @@
+@import '@fontsource-variable/literata/opsz.css';
+@import '@fontsource-variable/instrument-sans';
+@import './web.css';
+
+body {
+  height: auto;
+}
+
+.pc-doc {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 28px 24px 96px;
+  font-family: var(--pc-font-read);
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.pc-doc .pc-wordmark {
+  color: var(--pc-ink);
+  text-decoration: none;
+}
+
+.pc-doc h1 {
+  margin: 56px 0 4px;
+  font-size: 2rem;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.pc-doc h2 {
+  margin: 40px 0 8px;
+  font-family: var(--pc-font-ui);
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.pc-doc-date {
+  margin-top: 0;
+  color: var(--pc-muted);
+  font-family: var(--pc-font-ui);
+  font-size: 15px;
+}
+
+.pc-doc ul {
+  padding-left: 1.2em;
+}
+
+.pc-doc li + li {
+  margin-top: 6px;
+}
+
+.pc-doc a:not(.pc-wordmark) {
+  color: var(--pc-accent);
+}
