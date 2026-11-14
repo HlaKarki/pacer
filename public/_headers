@@ -1,0 +1,3 @@
+# Cloudflare skips injecting its Web Analytics script into responses marked no-transform, so the site stays analytics-free.
+/*
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
