@@ -34,6 +34,8 @@ await build({
   naming: { entry: '[name].[ext]', chunk: 'chunks/[name]-[hash].[ext]', asset: 'assets/[name]-[hash].[ext]' },
 })
 
+// Both fonts copy into fonts/files in parallel, so create it first or one copy's mkdir fails with EEXIST on Linux.
+await mkdir(`${OUT}/fonts/files`, { recursive: true })
 await Promise.all([
   cp('extension/manifest.json', `${OUT}/manifest.json`),
   cp('extension/reader.html', `${OUT}/reader.html`),
