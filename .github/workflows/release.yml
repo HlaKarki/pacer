@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # Obsidian's scan rebuilds main.js with the Bun in packageManager, so CI reads the same pin.
+      # setup-bun takes the Bun version from packageManager in package.json.
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       # Obsidian rejects a release whose tag differs from manifest.json's version.
