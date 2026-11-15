@@ -23,9 +23,11 @@ export class PacerStore {
   private timer: number | null = null
   private listeners = new Set<() => void>()
   private save: (data: PluginData) => Promise<void>
+  private readonly win: Window
 
-  constructor(saved: unknown, save: (data: PluginData) => Promise<void>) {
+  constructor(saved: unknown, save: (data: PluginData) => Promise<void>, win: Window) {
     this.save = save
+    this.win = win
     this.data = normalize(saved)
     this.snapshot = { ...DEFAULT_SETTINGS, ...this.data.settings }
   }
@@ -83,7 +85,7 @@ export class PacerStore {
 
   async flush(): Promise<void> {
     if (this.timer === null) return
-    window.clearTimeout(this.timer)
+    this.win.clearTimeout(this.timer)
     this.timer = null
     try {
       await this.save(this.data)
@@ -94,7 +96,7 @@ export class PacerStore {
   }
 
   private schedule() {
-    if (this.timer !== null) window.clearTimeout(this.timer)
-    this.timer = window.setTimeout(() => void this.flush(), SAVE_DELAY_MS)
+    if (this.timer !== null) this.win.clearTimeout(this.timer)
+    this.timer = this.win.setTimeout(() => void this.flush(), SAVE_DELAY_MS)
   }
 }

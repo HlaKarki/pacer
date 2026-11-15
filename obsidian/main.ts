@@ -23,7 +23,7 @@ export default class PacerPlugin extends Plugin {
   store!: PacerStore
 
   async onload() {
-    this.store = new PacerStore(await this.loadData(), (data) => this.saveData(data))
+    this.store = new PacerStore(await this.loadData(), (data) => this.saveData(data), window)
     this.registerView(VIEW_TYPE, (leaf) => new PacerView(leaf, this))
     try {
       this.registerExtensions(['epub'], VIEW_TYPE)
