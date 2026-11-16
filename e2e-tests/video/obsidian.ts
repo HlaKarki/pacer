@@ -140,8 +140,8 @@ async function prepare(page: Page) {
     if (explorer) ws.revealLeaf(explorer)
     ws.setActiveLeaf(leaf, { focus: true })
   }, NOTE)
-  // Obsidian on Linux draws its window buttons inside the page, where the capture would pick them up.
-  await page.addStyleTag({ content: '.titlebar-button-container { display: none !important; }' })
+  // Linux Obsidian draws its window buttons inside the page, and a fresh vault shows Sync's red offline icon, so hide both from the capture.
+  await page.addStyleTag({ content: '.titlebar-button-container, .status-bar-item.plugin-sync { display: none !important; }' })
   await Bun.sleep(1500)
 }
 
