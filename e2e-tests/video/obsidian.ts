@@ -11,7 +11,7 @@ import { MARKS, TAKES } from './timeline.ts'
 
 declare const app: any
 
-const K = Number(process.env.K ?? 16)
+const K = Number(process.env.K ?? 24)
 const OBSIDIAN = process.env.OBSIDIAN ?? (process.platform === 'darwin' ? '/Applications/Obsidian.app/Contents/MacOS/Obsidian' : '/usr/bin/obsidian')
 const DEMO = process.env.DEMO_DIR ?? join(tmpdir(), 'pacer-obsidian-demo')
 const VAULT = join(DEMO, 'vault')
