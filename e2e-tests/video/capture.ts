@@ -6,7 +6,7 @@ import { APP, openBrowser, PAGES, readState, type Pacer } from './browser.ts'
 import { Recorder } from './recorder.ts'
 import { MARKS, TAKES } from './timeline.ts'
 
-const K = Number(process.env.K ?? 10)
+const K = Number(process.env.K ?? 20)
 const DIR = join(OUT, 'video')
 const ALICE = join(import.meta.dir, '../fixtures/alice.epub')
 const A = MARKS.article
