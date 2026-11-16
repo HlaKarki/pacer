@@ -85,7 +85,7 @@ export function checkTakes(segs: Seg[], takes: Record<string, number>): string[]
     const take = takes[seg.clip]
     if (take === undefined) return [`${name(i, seg)} uses a take with no length`]
     const end = (seg.from ?? 0) + seg.len
-    return end > take + 1e-9 ? [`${name(i, seg)} needs ${end} s of a ${take} s take`] : []
+    return end > take + 1e-9 ? [`${name(i, seg)} needs ${+end.toFixed(2)} s of a ${+take.toFixed(2)} s take`] : []
   })
 }
 
@@ -102,4 +102,24 @@ export function checkMarks(segs: Seg[], marks: Record<string, Record<string, num
       return []
     })
   })
+}
+
+export type TakeLog = { K: number; marks: Record<string, number>; frames: { t: number }[] }
+
+export function takeFacts(log: TakeLog) {
+  const t = log.frames.map((f) => f.t)
+  const t0 = t[0]!
+  const gaps = t.slice(1).map((x, i) => x - t[i]!).sort((a, b) => a - b)
+  const mid = gaps.length >> 1
+  const median = gaps.length % 2 ? gaps[mid]! : (gaps[mid - 1]! + gaps[mid]!) / 2
+  return {
+    len: (t.at(-1)! - t0) / log.K,
+    marks: Object.fromEntries(Object.entries(log.marks).map(([k, m]) => [k, (m - t0) / log.K])),
+    fps: log.K / median,
+  }
+}
+
+export function checkFrameRate(rates: Record<string, number>, fps: number): string[] {
+  return Object.entries(rates).flatMap(([take, rate]) =>
+    rate < fps * 0.95 ? [`${take} was filmed at ${rate.toFixed(1)} fps, under the ${fps} fps render, so refilm it with a higher K`] : [])
 }

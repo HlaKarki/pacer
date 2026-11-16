@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { cardState, checkBeats, checkMarks, checkTakes, MARKS, minLen, SEGS, TAKES } from './timeline.ts'
+import { cardState, checkBeats, checkFrameRate, checkMarks, checkTakes, MARKS, minLen, SEGS, takeFacts, TAKES } from './timeline.ts'
 
 const HOOK = 'You can read any web page by following a highlight.'
 
@@ -106,5 +106,33 @@ describe('cardState', () => {
   test('shows the title from 0.2 s to 0.45 s', () => {
     expect(cardState(0.2).word).toBe(0)
     expect(cardState(0.45).word).toBe(1)
+  })
+})
+
+describe('takeFacts', () => {
+  const frames = Array.from({ length: 41 }, (_, i) => ({ t: 100 + i * 0.25 }))
+  frames.splice(20, 1)
+  const log = { K: 10, marks: { play: 105 }, frames }
+
+  test('measures the take length in take seconds', () => {
+    expect(takeFacts(log).len).toBeCloseTo(1.0, 6)
+  })
+
+  test('puts marks in take seconds from the first frame', () => {
+    expect(takeFacts(log).marks.play).toBeCloseTo(0.5, 6)
+  })
+
+  test('reads the frame rate from the median gap, so one skipped tick does not lower it', () => {
+    expect(takeFacts(log).fps).toBeCloseTo(40, 6)
+  })
+})
+
+describe('checkFrameRate', () => {
+  test('flags a take filmed slower than the render rate', () => {
+    expect(checkFrameRate({ article: 38.3 }, 60)).toHaveLength(1)
+  })
+
+  test('passes a take filmed fast enough for the render rate', () => {
+    expect(checkFrameRate({ article: 38.3 }, 30)).toEqual([])
   })
 })

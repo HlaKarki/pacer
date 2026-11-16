@@ -5,7 +5,7 @@ import { mkdir } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { CHROME, OUT, REPO } from '../setup.ts'
-import { CARD_FADE, cardState, checkBeats, checkTakes, clamp, inOut, out, ramp, SEGS, TAKES, type Seg } from './timeline.ts'
+import { CARD_FADE, cardState, checkBeats, checkFrameRate, checkMarks, checkTakes, clamp, inOut, out, ramp, SEGS, takeFacts, TAKES, type Seg } from './timeline.ts'
 
 const FPS = 60
 const CLIPS = join(OUT, 'video')
@@ -58,6 +58,11 @@ for (const s of SEGS) {
   total += s.len
 }
 
+const filmed = Object.fromEntries([...clips].map(([name, c]) => [name, takeFacts(c.log)]))
+const pick = <K extends 'len' | 'marks' | 'fps'>(key: K) => Object.fromEntries(Object.entries(filmed).map(([name, f]) => [name, f[key]]))
+const filmedProblems = [...checkTakes(SEGS, pick('len')), ...checkMarks(SEGS, pick('marks'))]
+if (filmedProblems.length) throw new Error(`The filmed takes break the timeline, so refilm them:\n${filmedProblems.join('\n')}`)
+
 const segAt = (t: number) => segs.findLast((s) => s.at <= t) ?? segs[0]!
 
 function camera(seg: Seg, t: number) {
@@ -86,17 +91,12 @@ function layer(seg: Seg & { at: number }, t: number, o: number) {
 // Output time of a clip mark, through whichever segment shows that moment of the clip.
 function markTimes(seg: Seg & { at: number }, mark: string) {
   const v = clips.get(seg.clip!)!.mark(mark)
-  const t = seg.at + (v - seg.from!)
-  if (t < seg.at || t > seg.at + seg.len) {
-    throw new Error(`${seg.clip} mark ${mark} lands at ${t.toFixed(2)} s, outside its beat from ${seg.at.toFixed(2)} to ${(seg.at + seg.len).toFixed(2)} s`)
-  }
-  return t
+  return seg.at + (v - seg.from!)
 }
 
 type KeyEvent = { start: number; end: number; presses: number[]; labels: string[] }
 const keyEvents: KeyEvent[] = []
 for (const seg of segs) {
-  if (seg.click) markTimes(seg, seg.click)
   for (const [mark, labels] of seg.keys ?? []) {
     const t = markTimes(seg, mark)
     const last = keyEvents.at(-1)
@@ -123,7 +123,6 @@ function stateAt(t: number) {
 
   const layers: ReturnType<typeof layer>[] = []
   let rsvp: { o: number; word: string[] | null; lid: number } | null = null
-  // The window keeps showing the last beat while it fades out for a card.
   const outgoing = !!seg.card && local < CARD_FADE
   const showPrev = fadeP < 1 || outgoing
   if (showPrev && prev?.clip) layers.push(layer(prev, t, 1))
@@ -210,6 +209,8 @@ const cardLogo = logoArg ? pathToFileURL(resolve(logoArg)).href : null
 const range = args.find((a) => a.startsWith('--range='))?.slice(8).split(',').map(Number) ?? [0, total]
 const outFile = args.find((a) => !a.startsWith('--')) ?? join(REPO, `release/video/pacer-demo${rough ? '-rough' : ''}.mp4`)
 const theme = args.find((a) => a.startsWith('--theme='))?.slice(8) ?? 'paper'
+const slow = stills ? [] : checkFrameRate(pick('fps'), fps)
+if (slow.length) throw new Error(`Some takes are too choppy for a ${fps} fps render:\n${slow.join('\n')}`)
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true })
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 })
