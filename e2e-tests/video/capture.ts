@@ -1,13 +1,15 @@
 // Films the browser clips for the demo on slowed clocks. Marks log, in real seconds, when each key or click went in, so the edit can draw it.
 import type { Page } from 'playwright'
 import { join } from 'node:path'
-import { OUT } from '../setup.ts'
+import { fixtures, OUT } from '../setup.ts'
 import { APP, openBrowser, PAGES, readState, type Pacer } from './browser.ts'
 import { Recorder } from './recorder.ts'
+import { MARKS, TAKES } from './timeline.ts'
 
 const K = Number(process.env.K ?? 10)
 const DIR = join(OUT, 'video')
 const ALICE = join(import.meta.dir, '../fixtures/alice.epub')
+const A = MARKS.article
 
 async function film(b: Pacer, page: Page, name: string, seconds: number, script: (at: (v: number) => Promise<void>, rec: Recorder) => Promise<void>, probe = true) {
   const cdp = await b.slowCss(page)
@@ -47,25 +49,25 @@ async function article() {
   await page.evaluate(() => document.fonts.ready)
   const tab = await b.tabIdOf(page.url())
   await b.dilateTab(tab)
-  await film(b, page, 'article', 29.5, async (at, rec) => {
-    await at(1)
+  await film(b, page, 'article', TAKES.article, async (at, rec) => {
+    await at(A.pace)
     rec.mark('pace')
     await b.pace(tab)
-    await at(2)
+    await at(A.play)
     await press(page, rec, 'Space', 'play')
-    await at(9.8)
+    await at(A.up1)
     await press(page, rec, 'ArrowUp', 'up1')
-    await at(10.6)
+    await at(A.up2)
     await press(page, rec, 'ArrowUp', 'up2')
-    await at(23.5)
+    await at(A.click)
     const p = await wordAt(page, 'A saccade is fast.', 'saccade')
     rec.mark('click', p)
     await page.mouse.click(p.x, p.y)
-    await at(25.4)
+    await at(A.esc1)
     await press(page, rec, 'Escape', 'esc1')
-    await at(26.1)
+    await at(A.esc2)
     await press(page, rec, 'Escape', 'esc2')
-    await at(27.4)
+    await at(A.pace2)
     rec.mark('pace2')
     await b.pace(tab)
   })
@@ -84,8 +86,8 @@ async function cold() {
   })
   const tab = await b.tabIdOf(page.url())
   await b.dilateTab(tab)
-  await film(b, page, 'cold', 7, async (at, rec) => {
-    await at(0.3)
+  await film(b, page, 'cold', TAKES.cold, async (at, rec) => {
+    await at(MARKS.cold.pace)
     rec.mark('pace')
     await b.pace(tab)
   })
@@ -104,14 +106,15 @@ async function pdf() {
   const reader = await appeared
   await reader.waitForSelector('.pc-reader .pc-w', { timeout: 30000 })
   await reader.evaluate(() => document.fonts.ready)
-  await film(b, reader, 'pdf', 9, async (at, rec) => {
-    await at(0.6)
+  await film(b, reader, 'pdf', TAKES.pdf, async (at, rec) => {
+    await at(MARKS.pdf.play)
     await press(reader, rec, 'Space', 'play')
   }, false)
   await b.close()
 }
 
 async function epub() {
+  await fixtures()
   const b = await openBrowser(K)
   const page = await b.ctx.newPage()
   await page.addInitScript(b.shim)
@@ -125,8 +128,8 @@ async function epub() {
   await page.getByRole('button', { name: 'Contents' }).click()
   await page.getByRole('dialog', { name: 'Contents' }).getByRole('button', { name: /Down the Rabbit/ }).click()
   await Bun.sleep(500 * K)
-  await film(b, page, 'epub', 6, async (at, rec) => {
-    await at(0.6)
+  await film(b, page, 'epub', TAKES.epub, async (at, rec) => {
+    await at(MARKS.epub.play)
     await press(page, rec, 'Space', 'play')
   }, false)
   await b.close()

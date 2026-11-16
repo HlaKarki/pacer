@@ -38,9 +38,12 @@ body { position: relative; background: linear-gradient(180deg, var(--bg), var(--
 .ripple { position: absolute; left: 0; top: 0; width: 120px; height: 120px; border-radius: 50%; border: 5px solid var(--ink); }
 
 .end { position: absolute; inset: 0; background: linear-gradient(180deg, var(--bg), var(--bg2)); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--cap); }
-.end .mark { position: relative; isolation: isolate; font-family: 'Literata', Georgia, serif; font-size: 180px; font-weight: 640; letter-spacing: -0.01em; color: var(--ink); padding: 0 0.22em 0.04em; line-height: 1.25; }
-.end .mark::before { content: ''; position: absolute; inset: 0; border-radius: 0.1em; background: var(--marker); transform-origin: 0 50%; transform: scaleX(var(--sweep, 1)); z-index: -1; }
-.end .mark span { position: relative; }
+.mark { position: relative; isolation: isolate; font-family: 'Literata', Georgia, serif; font-size: 180px; font-weight: 640; letter-spacing: -0.01em; color: var(--ink); padding: 0 0.22em 0.04em; line-height: 1.25; }
+.mark::before { content: ''; position: absolute; inset: 0; border-radius: 0.1em; background: var(--marker); transform-origin: 0 50%; transform: scaleX(var(--sweep, 1)); z-index: -1; }
+.mark span { position: relative; }
+.card { position: absolute; inset: 0; display: grid; place-items: center; }
+.card .mark { font-size: 120px; }
+.card img { height: 200px; }
 .end .tag { margin-top: 58px; font-size: 52px; font-weight: 600; letter-spacing: -0.015em; }
 .end .where { margin-top: 22px; font-size: 38px; color: var(--soft); }
 </style>
@@ -58,6 +61,10 @@ body { position: relative; background: linear-gradient(180deg, var(--bg), var(--
     <div class="ripple" id="ripple"></div>
     <svg class="cursor" id="cursor" viewBox="0 0 40 40"><path d="M6 4 L6 33 L13.5 26 L18.5 37 L23.5 35 L18.6 24.2 L28.5 24 Z" fill="#111" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></svg>
   </div>
+</div>
+<div class="card" id="card">
+  <div class="mark" id="cardMark"><span id="cardText"></span></div>
+  <img id="cardLogo" alt="">
 </div>
 <div class="end" id="end">
   <div class="mark" id="mark"><span>Pacer</span></div>
@@ -138,6 +145,22 @@ window.render = async (s) => {
   show($('cursor'), c ? c.o : 0, c ? `translate(${c.x - 8}px, ${c.y - 5}px) scale(${c.down ? 0.86 : 1})` : '')
   const r = c && c.ripple
   show($('ripple'), r ? r.o : 0, r ? `translate(${c.x - 60}px, ${c.y - 60}px) scale(${r.r})` : '')
+
+  const card = s.card
+  show($('card'), card ? card.o : 0)
+  if (card) {
+    $('cardText').textContent = card.text
+    $('cardText').style.opacity = String(card.word)
+    $('cardMark').style.setProperty('--sweep', String(card.sweep))
+    $('cardMark').hidden = !!card.logo
+    const logo = $('cardLogo')
+    logo.hidden = !card.logo
+    if (card.logo && logo.dataset.src !== card.logo) {
+      logo.dataset.src = card.logo
+      logo.src = card.logo
+      loads.push(logo.decode())
+    }
+  }
 
   show($('win'), s.win.o, `translateY(${s.win.dy}px) scale(${s.win.scale})`)
   const e = s.end
