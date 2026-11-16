@@ -20,15 +20,15 @@ export type Seg = {
   end?: boolean
 }
 
-export const TAKES: Record<string, number> = { cold: 8, article: 26, pdf: 9, epub: 7, obsidian: 10 }
+export const TAKES = { cold: 8, article: 26, pdf: 9, epub: 7, obsidian: 10 } satisfies Record<string, number>
 
-export const MARKS: Record<string, Record<string, number>> = {
+export const MARKS = {
   article: { pace: 1.2, play: 2.4, up1: 8.5, up2: 9.3, click: 15.2, esc1: 20.0, esc2: 20.7, pace2: 22.5 },
   cold: { pace: 0.3 },
   obsidian: { pace: 1.8, play: 2.6 },
   pdf: { play: 0.6 },
   epub: { play: 0.6 },
-}
+} satisfies Record<string, Record<string, number>>
 
 const ALT = ['Alt', 'Shift', 'P']
 const LINE = 275
