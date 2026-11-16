@@ -2,6 +2,8 @@
 
 Pacer is a speed reader that leaves the page alone. A highlighter moves through the text at the pace you set, and the words around it stay where they are. Miss a word and it's one glance back, or click it and Pacer carries on from there.
 
+https://github.com/user-attachments/assets/9e68740b-ad96-44b5-9f0b-9556ed6787df
+
 It comes in three forms:
 
 - **Chrome extension.** Press the Pacer button or Alt+Shift+P on an article, and the highlighter runs on the page itself. PDFs open in a Pacer tab next to the original.
