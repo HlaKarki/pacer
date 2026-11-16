@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { checkBeats, checkMarks, checkTakes, MARKS, minLen, SEGS, TAKES } from './timeline.ts'
+import { cardState, checkBeats, checkMarks, checkTakes, MARKS, minLen, SEGS, TAKES } from './timeline.ts'
 
 const HOOK = 'You can read any web page by following a highlight.'
 
@@ -80,5 +80,31 @@ describe('the recut timeline', () => {
 
   test('runs 57 s', () => {
     expect(SEGS.reduce((sum, s) => sum + s.len, 0)).toBeCloseTo(57, 6)
+  })
+})
+
+describe('cardState', () => {
+  test('fades the card in over 0.3 s', () => {
+    expect(cardState(0).o).toBe(0)
+    expect(cardState(0.3).o).toBe(1)
+  })
+
+  test('holds the card, then fades it out by 1.5 s', () => {
+    expect(cardState(1.2).o).toBe(1)
+    expect(cardState(1.5).o).toBe(0)
+  })
+
+  test('leaves the last 0.5 s empty', () => {
+    expect(cardState(1.8).o).toBe(0)
+  })
+
+  test('sweeps the marker from 0.2 s to 0.7 s', () => {
+    expect(cardState(0.2).sweep).toBe(0)
+    expect(cardState(0.7).sweep).toBe(1)
+  })
+
+  test('shows the title from 0.2 s to 0.45 s', () => {
+    expect(cardState(0.2).word).toBe(0)
+    expect(cardState(0.45).word).toBe(1)
   })
 })

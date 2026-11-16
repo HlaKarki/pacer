@@ -2,10 +2,10 @@
 import { chromium } from 'playwright'
 import { existsSync, readFileSync } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { CHROME, OUT, REPO } from '../setup.ts'
-import { SEGS, type Seg } from './timeline.ts'
+import { CARD_FADE, cardState, checkBeats, checkTakes, clamp, inOut, out, ramp, SEGS, TAKES, type Seg } from './timeline.ts'
 
 const FPS = 60
 const CLIPS = join(OUT, 'video')
@@ -21,7 +21,8 @@ class Clip {
   }
   static load(name: string) {
     const file = join(CLIPS, name, 'log.json')
-    return existsSync(file) ? new Clip(name, JSON.parse(readFileSync(file, 'utf8'))) : null
+    if (!existsSync(file)) throw new Error(`${name} has no take at ${file}, so film it first.`)
+    return new Clip(name, JSON.parse(readFileSync(file, 'utf8')))
   }
   mark(name: string) {
     const m = this.log.marks[name]
@@ -43,24 +44,16 @@ class Clip {
   }
 }
 
-const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x))
-const ramp = (t: number, a: number, b: number) => clamp((t - a) / (b - a))
-const inOut = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2)
-const out = (p: number) => 1 - (1 - p) ** 3
 const back = (p: number) => 1 + 2.2 * (p - 1) ** 3 + 1.2 * (p - 1) ** 2
+
+const problems = [...checkBeats(SEGS), ...checkTakes(SEGS, TAKES)]
+if (problems.length) throw new Error(`The timeline breaks its rules:\n${problems.join('\n')}`)
 
 const clips = new Map<string, Clip>()
 const segs: (Seg & { at: number })[] = []
 let total = 0
 for (const s of SEGS) {
-  if (s.clip && !clips.has(s.clip)) {
-    const c = Clip.load(s.clip)
-    if (!c) {
-      console.log(`skipping ${s.clip}: no clip`)
-      continue
-    }
-    clips.set(s.clip, c)
-  }
+  if (s.clip && !clips.has(s.clip)) clips.set(s.clip, Clip.load(s.clip))
   segs.push({ ...s, at: total })
   total += s.len
 }
@@ -93,12 +86,17 @@ function layer(seg: Seg & { at: number }, t: number, o: number) {
 // Output time of a clip mark, through whichever segment shows that moment of the clip.
 function markTimes(seg: Seg & { at: number }, mark: string) {
   const v = clips.get(seg.clip!)!.mark(mark)
-  return seg.at + (v - seg.from!)
+  const t = seg.at + (v - seg.from!)
+  if (t < seg.at || t > seg.at + seg.len) {
+    throw new Error(`${seg.clip} mark ${mark} lands at ${t.toFixed(2)} s, outside its beat from ${seg.at.toFixed(2)} to ${(seg.at + seg.len).toFixed(2)} s`)
+  }
+  return t
 }
 
 type KeyEvent = { start: number; end: number; presses: number[]; labels: string[] }
 const keyEvents: KeyEvent[] = []
 for (const seg of segs) {
+  if (seg.click) markTimes(seg, seg.click)
   for (const [mark, labels] of seg.keys ?? []) {
     const t = markTimes(seg, mark)
     const last = keyEvents.at(-1)
@@ -125,9 +123,12 @@ function stateAt(t: number) {
 
   const layers: ReturnType<typeof layer>[] = []
   let rsvp: { o: number; word: string[] | null; lid: number } | null = null
-  if (fadeP < 1 && prev?.clip) layers.push(layer(prev, t, 1))
+  // The window keeps showing the last beat while it fades out for a card.
+  const outgoing = !!seg.card && local < CARD_FADE
+  const showPrev = fadeP < 1 || outgoing
+  if (showPrev && prev?.clip) layers.push(layer(prev, t, 1))
   if (seg.clip) layers.push(layer(seg, t, prev?.clip ? fadeP : 1))
-  if (seg.rsvp || (prev?.rsvp && fadeP < 1)) {
+  if (seg.rsvp || (prev?.rsvp && showPrev)) {
     const r = seg.rsvp ? seg : prev!
     const rl = t - r.at
     const n = Math.floor((rl - 0.1) / 0.12)
@@ -135,7 +136,7 @@ function stateAt(t: number) {
     // A real blink shuts in about 90 ms, stays shut for 40 and takes about twice as long to open.
     const b = rl - blink
     const lid = b < 0 ? 0 : b < 0.09 ? (b / 0.09) ** 2 : b < 0.13 ? 1 : b < 0.31 ? 1 - out((b - 0.13) / 0.18) : 0
-    rsvp = { o: seg.rsvp ? (prev?.clip ? fadeP : 1) : 1 - fadeP, word: n >= 0 ? orp(RSVP_TEXT[n % RSVP_TEXT.length]!) : null, lid }
+    rsvp = { o: seg.rsvp ? (prev?.clip ? fadeP : 1) : outgoing ? 1 : 1 - fadeP, word: n >= 0 ? orp(RSVP_TEXT[n % RSVP_TEXT.length]!) : null, lid }
   }
 
   const caps: ({ text: string; o: number; dy: number } | null)[] = [{ text: seg.caption, o: 1, dy: 0 }, null]
@@ -177,7 +178,9 @@ function stateAt(t: number) {
 
   const endSeg = segs.find((s) => s.end)!
   const e = t - endSeg.at
-  const win = { o: 1 - inOut(ramp(e, 0, 0.4)), dy: 0, scale: 1 - 0.04 * inOut(ramp(e, 0, 0.4)) }
+  const cardWin = seg.card ? 1 - inOut(ramp(local, 0, CARD_FADE)) : prev?.card ? fadeP : 1
+  const card = seg.card ? { text: seg.card, logo: seg.card === 'In Obsidian' ? cardLogo : null, ...cardState(local) } : null
+  const win = { o: (1 - inOut(ramp(e, 0, 0.4))) * cardWin, dy: 0, scale: 1 - 0.04 * inOut(ramp(e, 0, 0.4)) }
   const end = {
     o: inOut(ramp(e, 0, 0.4)),
     sweep: out(ramp(e, 0.3, 0.85)),
@@ -191,13 +194,21 @@ function stateAt(t: number) {
     caps[1] = null
     if (prev.clip) layers.splice(0, layers.length, layer(prev, t, 1))
   }
-  return { layers, rsvp, caps, keys, cursor, win, end }
+  return { layers, rsvp, caps, keys, cursor, card, win, end }
 }
 
 const args = process.argv.slice(2)
-const stills = args.find((a) => a.startsWith('--stills='))?.slice(9).split(',').map(Number)
+const rough = args.includes('--rough')
+const fps = rough ? 30 : FPS
+const stillsArg = args.find((a) => a.startsWith('--stills='))?.slice(9)
+const source = (s: Seg) => s.clip ?? (s.card ? 'card' : s.rsvp ? 'rsvp' : 'end')
+const stills = stillsArg === 'beats'
+  ? segs.map((s, i) => ({ t: s.at + 0.6 * s.len, name: `${String(i + 1).padStart(2, '0')}-${source(s)}` }))
+  : stillsArg?.split(',').map((x) => ({ t: Number(x), name: Number(x).toFixed(2) }))
+const logoArg = args.find((a) => a.startsWith('--card-logo='))?.slice(12)
+const cardLogo = logoArg ? pathToFileURL(resolve(logoArg)).href : null
 const range = args.find((a) => a.startsWith('--range='))?.slice(8).split(',').map(Number) ?? [0, total]
-const outFile = args.find((a) => !a.startsWith('--')) ?? join(REPO, 'release/video/pacer-demo.mp4')
+const outFile = args.find((a) => !a.startsWith('--')) ?? join(REPO, `release/video/pacer-demo${rough ? '-rough' : ''}.mp4`)
 const theme = args.find((a) => a.startsWith('--theme='))?.slice(8) ?? 'paper'
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true })
@@ -216,26 +227,26 @@ const shoot = async (t: number) => {
   return Buffer.from(data, 'base64')
 }
 
-console.log(`total ${total.toFixed(2)} s, segments at ${segs.map((s) => `${s.at.toFixed(1)}${s.clip ? ` ${s.clip}` : s.rsvp ? ' rsvp' : ' end'}`).join(', ')}`)
+console.log(`total ${total.toFixed(2)} s, segments at ${segs.map((s) => `${s.at.toFixed(1)} ${source(s)}`).join(', ')}`)
 if (stills) {
   const dir = join(OUT, `video/stills-${theme}`)
   await mkdir(dir, { recursive: true })
-  for (const t of stills) await Bun.write(join(dir, `${t.toFixed(2)}.png`), await shoot(t))
+  for (const { t, name } of stills) await Bun.write(join(dir, `${name}.png`), await shoot(t))
   console.log(dir)
 } else {
   await mkdir(join(outFile, '..'), { recursive: true })
   const ff = Bun.spawn(
-    ['ffmpeg', '-loglevel', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-',
-      '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', '16', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
+    ['ffmpeg', '-loglevel', 'error', '-y', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'png', '-i', '-',
+      '-vf', `scale=${rough ? '1280:720:flags=lanczos:' : ''}out_color_matrix=bt709:out_range=tv,format=yuv420p`,
+      '-c:v', 'libx264', '-preset', rough ? 'veryfast' : 'slow', '-crf', rough ? '23' : '16', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
       '-movflags', '+faststart', outFile],
     { stdin: 'pipe', stderr: 'inherit' },
   )
   const [a, b] = range as [number, number]
-  const count = Math.round((b - a) * FPS)
+  const count = Math.round((b - a) * fps)
   const began = performance.now()
   for (let n = 0; n < count; n++) {
-    ff.stdin.write(await shoot(a + n / FPS))
+    ff.stdin.write(await shoot(a + n / fps))
     if (n % 120 === 0) console.log(`${n}/${count} ${((performance.now() - began) / 1000).toFixed(0)} s`)
   }
   await ff.stdin.end()

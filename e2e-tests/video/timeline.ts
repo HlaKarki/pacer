@@ -55,6 +55,19 @@ export const SEGS: Seg[] = [
   { len: 4.5, end: true, caption: '' },
 ]
 
+export const clamp = (x: number, a = 0, b = 1) => Math.min(b, Math.max(a, x))
+export const ramp = (t: number, a: number, b: number) => clamp((t - a) / (b - a))
+export const inOut = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2)
+export const out = (p: number) => 1 - (1 - p) ** 3
+
+export const CARD_FADE = 0.3
+
+export const cardState = (local: number) => ({
+  o: inOut(ramp(local, 0, CARD_FADE)) * (1 - inOut(ramp(local, 1.5 - CARD_FADE, 1.5))),
+  sweep: out(ramp(local, 0.2, 0.7)),
+  word: ramp(local, 0.2, 0.45),
+})
+
 export const minLen = (seg: Pick<Seg, 'caption'>) => (seg.caption ? [...seg.caption].length / READ_CPS + WATCH : 0)
 
 const name = (i: number, seg: Seg) => `beat ${i + 1} (${seg.clip ?? seg.card ?? (seg.rsvp ? 'rsvp' : 'end')})`
