@@ -7,11 +7,12 @@ import { join } from 'node:path'
 import { OUT, REPO } from '../setup.ts'
 import { dilate } from './dilate.ts'
 import { Recorder } from './recorder.ts'
+import { MARKS, TAKES } from './timeline.ts'
 
 declare const app: any
 
 const K = Number(process.env.K ?? 16)
-const OBSIDIAN = '/Applications/Obsidian.app/Contents/MacOS/Obsidian'
+const OBSIDIAN = process.env.OBSIDIAN ?? (process.platform === 'darwin' ? '/Applications/Obsidian.app/Contents/MacOS/Obsidian' : '/usr/bin/obsidian')
 const DEMO = process.env.DEMO_DIR ?? join(tmpdir(), 'pacer-obsidian-demo')
 const VAULT = join(DEMO, 'vault')
 const USER_DATA = join(DEMO, 'userdata')
@@ -19,9 +20,9 @@ const FRAMES = join(OUT, 'video/obsidian')
 const VAULT_ID = '9ace0b5d3e7f1a26'
 const W = 1280
 const H = 720
-const PACE_AT = 1
-const PLAY_AFTER = 0.6
-const END = 9.6
+const { pace: PACE_AT, play: PLAY_AT } = MARKS.obsidian
+const END = TAKES.obsidian
+const DISPLAY = ':99'
 const REMOTE = "(require('electron').remote ?? require('@electron/remote'))"
 
 async function until<T>(what: string, check: () => Promise<T | null | undefined | false> | T | null | undefined | false, ms = 30_000): Promise<T> {
@@ -35,6 +36,8 @@ async function until<T>(what: string, check: () => Promise<T | null | undefined 
 }
 
 const pngWidth = (base64: string) => Buffer.from(base64, 'base64').readUInt32BE(16)
+
+if (!existsSync(OBSIDIAN)) throw new Error(`Obsidian is not at ${OBSIDIAN}. Install it or set OBSIDIAN.`)
 
 const build = Bun.spawnSync(['bun', 'run', 'build'], { cwd: REPO, stdout: 'inherit', stderr: 'inherit' })
 if (build.exitCode !== 0) throw new Error('The plugin build failed.')
@@ -77,6 +80,18 @@ await writeFile(join(VAULT, '.obsidian/appearance.json'), JSON.stringify({ theme
 await writeFile(join(USER_DATA, 'obsidian.json'), JSON.stringify({ vaults: { [VAULT_ID]: { path: VAULT, ts: Date.now(), open: true } }, updateDisabled: true }))
 await writeFile(join(USER_DATA, `${VAULT_ID}.json`), JSON.stringify({ width: W, height: H, isMaximized: false, devTools: false, zoom: 0 }))
 
+// A Linux box without a desktop has no screen for the window, so give Obsidian a virtual one.
+const xvfb = process.platform === 'linux' && !process.env.DISPLAY
+  ? Bun.spawn(['Xvfb', DISPLAY, '-screen', '0', '1920x1080x24', '-nolisten', 'tcp'], { stdout: 'ignore', stderr: 'ignore' })
+  : null
+if (xvfb) await until('Xvfb', () => {
+  if (xvfb.exitCode !== null) throw new Error(`Xvfb exited with ${xvfb.exitCode}`)
+  return existsSync(`/tmp/.X11-unix/X${DISPLAY.slice(1)}`)
+}).catch((e) => {
+  xvfb.kill()
+  throw e
+})
+
 const log = openSync(join(DEMO, 'obsidian.log'), 'w')
 const proc = Bun.spawn(
   [
@@ -87,7 +102,7 @@ const proc = Bun.spawn(
     '--disable-backgrounding-occluded-windows',
     '--disable-renderer-backgrounding',
   ],
-  { stdout: log, stderr: log },
+  { stdout: log, stderr: log, env: xvfb ? { ...process.env, DISPLAY } : process.env },
 )
 console.log(`Obsidian pid ${proc.pid}`)
 
@@ -125,6 +140,8 @@ async function prepare(page: Page) {
     if (explorer) ws.revealLeaf(explorer)
     ws.setActiveLeaf(leaf, { focus: true })
   }, NOTE)
+  // Obsidian on Linux draws its window buttons inside the page, where the capture would pick them up.
+  await page.addStyleTag({ content: '.titlebar-button-container { display: none !important; }' })
   await Bun.sleep(1500)
 }
 
@@ -155,7 +172,7 @@ async function capture(page: Page, cdp: CDPSession) {
   await sleepUntil(PACE_AT)
   rec.mark('pace')
   const paced = await page.evaluate(() => app.commands.executeCommandById('pacer:pace-file') as boolean)
-  await sleepUntil(PACE_AT + PLAY_AFTER)
+  await sleepUntil(PLAY_AT)
   const opened = await readerState(page)
   rec.mark('play')
   await page.keyboard.press('Space')
@@ -185,4 +202,5 @@ try {
 } finally {
   await quit()
   closeSync(log)
+  xvfb?.kill()
 }
