@@ -5,6 +5,7 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { CHROME, OUT, REPO } from '../setup.ts'
+import { SEGS, type Seg } from './timeline.ts'
 
 const FPS = 60
 const CLIPS = join(OUT, 'video')
@@ -13,20 +14,6 @@ const ZOOM = VIEW.w / 1280
 
 type Probe = { scrollY: number; now: { text: string; x: number; y: number; w: number; h: number } | null } | null
 type Log = { K: number; marks: Record<string, number>; data: Record<string, unknown>; frames: { file: string; t: number; probe?: Probe }[] }
-type Cam = [t: number, s: number, fx: number, fy: number]
-type Seg = {
-  len: number
-  caption: string
-  clip?: string
-  from?: number
-  fade?: number
-  cam?: Cam[]
-  keys?: [mark: string, labels: string[]][]
-  click?: string
-  rsvp?: boolean
-  end?: boolean
-}
-
 class Clip {
   readonly t0: number
   constructor(readonly name: string, readonly log: Log) {
@@ -61,28 +48,6 @@ const ramp = (t: number, a: number, b: number) => clamp((t - a) / (b - a))
 const inOut = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2)
 const out = (p: number) => 1 - (1 - p) ** 3
 const back = (p: number) => 1 + 2.2 * (p - 1) ** 3 + 1.2 * (p - 1) ** 2
-
-const ALT = ['Alt', 'Shift', 'P']
-const LINE = 275
-const SEGS: Seg[] = [
-  { len: 3.4, clip: 'cold', from: 2.0, caption: 'You can read any web page by following a highlight.', cam: [[0, 1.3, 640, LINE], [3, 1.42, 640, LINE]] },
-  { len: 3.2, rsvp: true, fade: 0.3, caption: 'In one-word-at-a-time apps, you miss words when you blink.' },
-  { len: 4.0, clip: 'article', from: 0.4, fade: 0.3, caption: 'You can start with Alt+Shift+P, then play with Space.', keys: [['pace', ALT], ['play', ['Space']]] },
-  {
-    len: 5.0, clip: 'article', from: 7.8, fade: 0.3, caption: 'You can speed up or slow down with ↑ and ↓.', keys: [['up1', ['↑']], ['up2', ['↑']]],
-    cam: [[1.3, 1, 640, 400], [2.0, 1.6, 520, 690], [3.9, 1.6, 520, 690], [4.7, 1.1, 640, LINE]],
-  },
-  { len: 4.0, clip: 'article', from: 18.0, fade: 0.3, caption: 'You get more time on long or rare words and less on “the”.', cam: [[0.1, 1.1, 640, LINE], [1.1, 1.6, 640, LINE]] },
-  { len: 3.0, clip: 'article', from: 22.0, caption: 'You can jump to any word by clicking it.', click: 'click', cam: [[0, 1.6, 640, LINE], [0.7, 1.3, 640, LINE]] },
-  {
-    len: 4.0, clip: 'article', from: 25.0, caption: 'You can stop with Esc and resume from the same word later.',
-    keys: [['esc1', ['Esc']], ['esc2', ['Esc']], ['pace2', ALT]], cam: [[0, 1.3, 640, LINE], [0.6, 1, 640, LINE]],
-  },
-  { len: 4.0, clip: 'obsidian', from: 0.5, fade: 0.3, caption: 'You can read your Obsidian notes the same way.', keys: [['play', ['Space']]], cam: [[1.3, 1, 640, 360], [2.4, 1.45, 1100, 600]] },
-  { len: 1.8, clip: 'pdf', from: 0.3, fade: 0.3, caption: 'You can read PDFs and EPUBs in Pacer’s reader too.' },
-  { len: 1.8, clip: 'epub', from: 2.2, fade: 0.3, caption: 'You can read PDFs and EPUBs in Pacer’s reader too.' },
-  { len: 4.0, end: true, caption: '' },
-]
 
 const clips = new Map<string, Clip>()
 const segs: (Seg & { at: number })[] = []
